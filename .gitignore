@@ -1,0 +1,18 @@
+# Project
+[Bb]uild/
+
+# Resources
+[Rr]es/
+
+# Misc
+misc/pathto_vcvarsall.txt
+
+# Visual Studio
+.vs/
+src/x64/
+src/Debug/
+src/Release/
+src/*.sln
+src/*.vcxproj
+src/*.filters
+src/*.user
