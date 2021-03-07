@@ -1,0 +1,1 @@
+place all resources in this folder (res)

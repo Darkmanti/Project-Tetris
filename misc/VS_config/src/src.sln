@@ -11,6 +11,10 @@ Global
 		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		UnityDebug|x64 = UnityDebug|x64
+		UnityDebug|x86 = UnityDebug|x86
+		UnityRelease|x64 = UnityRelease|x64
+		UnityRelease|x86 = UnityRelease|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.Debug|x64.ActiveCfg = Debug|x64
@@ -21,6 +25,14 @@ Global
 		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.Release|x64.Build.0 = Release|x64
 		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.Release|x86.ActiveCfg = Release|Win32
 		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.Release|x86.Build.0 = Release|Win32
+		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.UnityDebug|x64.ActiveCfg = UnityDebug|x64
+		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.UnityDebug|x64.Build.0 = UnityDebug|x64
+		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.UnityDebug|x86.ActiveCfg = UnityDebug|Win32
+		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.UnityDebug|x86.Build.0 = UnityDebug|Win32
+		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.UnityRelease|x64.ActiveCfg = UnityRelease|x64
+		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.UnityRelease|x64.Build.0 = UnityRelease|x64
+		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.UnityRelease|x86.ActiveCfg = UnityRelease|Win32
+		{73B4D765-81E7-40FE-BC66-3AF8F8921372}.UnityRelease|x86.Build.0 = UnityRelease|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
