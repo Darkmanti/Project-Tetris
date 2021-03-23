@@ -1,26 +1,47 @@
 #include <Windows.h>
 #include "win_platform.h"
-#include "Math.h"
+#include "math.h"
+#include "debug_console.h"
 
 //init window on windows
 
-BITMAPINFO bitmapInfo = {};
-void* bitmapMemory;
-int bitmapWidth;
-int bitmapHeight;
+struct Win32__Bitmap_Offscreen_Buffer
+{
+	BITMAPINFO info;
+	void* memory;
+	int width;
+	int height;
+	int pitch;
+};
+
+struct Win32_Window_Dimension
+{
+	int width;
+	int height;
+};
 
 HWND hMainWnd = {};
 MSG msg = {};
+Win32__Bitmap_Offscreen_Buffer backbuffer;
 
-void RenderWeirdGradient(int xOffset, int yOffset)
+Win32_Window_Dimension Win32GetWindowDimension(HWND hWnd)
 {
-	int bytesPerPixel = bitmapInfo.bmiHeader.biBitCount / 8;
-	int pitch = bitmapWidth * bytesPerPixel;
-	u8* row = (u8*)bitmapMemory;
-	for (int y = 0; y < bitmapHeight; ++y)
+	RECT clientRect = {};
+	GetClientRect(hWnd, &clientRect);
+	Win32_Window_Dimension rect = {};
+	rect.width = clientRect.right - clientRect.left;
+	rect.height = clientRect.bottom - clientRect.top;
+
+	return rect;
+}
+
+void RenderWeirdGradient(Win32__Bitmap_Offscreen_Buffer buffer, int xOffset, int yOffset)
+{
+	u8* row = (u8*)buffer.memory;
+	for (int y = 0; y < buffer.height; ++y)
 	{
 		u32* pixel = (u32*)row;
-		for (int x = 0; x < bitmapWidth; ++x)
+		for (int x = 0; x < buffer.width; ++x)
 		{
 			u8 red = 0;
 			u8 green = (y + yOffset);
@@ -30,44 +51,57 @@ void RenderWeirdGradient(int xOffset, int yOffset)
 			*pixel++ = (blue | (green << 8) | (red << 16) | (reserv << 24));
 		}
 
-		row += pitch;
+		row += buffer.pitch;
 	}
 }
 
 // Resize window rect
-void Win32ResizeDIBSection(int width, int height)
+void Win32ResizeDIBSection(Win32__Bitmap_Offscreen_Buffer* buffer, int width, int height)
 {
-	if (bitmapMemory)
+	if (buffer->memory)
 	{
-		VirtualFree(bitmapMemory, NULL, MEM_RELEASE);
+		VirtualFree(buffer->memory, NULL, MEM_RELEASE);
 	}
 
-	bitmapWidth = width;
-	bitmapHeight = height;
+	buffer->width = width;
+	buffer->height = height;
 
-	bitmapInfo.bmiHeader.biSize = sizeof(bitmapInfo.bmiHeader);
-	bitmapInfo.bmiHeader.biWidth = bitmapWidth;
-	bitmapInfo.bmiHeader.biHeight = -bitmapHeight;
-	bitmapInfo.bmiHeader.biPlanes = 1;
-	bitmapInfo.bmiHeader.biBitCount = 32;
-	bitmapInfo.bmiHeader.biCompression = BI_RGB;
+	buffer->info.bmiHeader.biSize = sizeof(buffer->info.bmiHeader);
+	buffer->info.bmiHeader.biWidth = buffer->width;
+	buffer->info.bmiHeader.biHeight = -buffer->height;
+	buffer->info.bmiHeader.biPlanes = 1;
+	buffer->info.bmiHeader.biBitCount = 32;
+	buffer->info.bmiHeader.biCompression = BI_RGB;
 
-	int bytesPerPixel = bitmapInfo.bmiHeader.biBitCount / 8;
-	int bitmapMemorySize = (bitmapWidth * bitmapHeight) * bytesPerPixel;
-	bitmapMemory = VirtualAlloc(NULL, bitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+	int bytesPerPixel = buffer->info.bmiHeader.biBitCount / 8;
+	int bitmapMemorySize = (buffer->width * buffer->height) * bytesPerPixel;
+	buffer->memory = VirtualAlloc(NULL, bitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+	buffer->pitch = buffer->width * bytesPerPixel;
 }
 
-void Win32UpdateWindow(HDC deviceContext, RECT *windowRect)
+void Win32DisplayBufferInWindow(Win32__Bitmap_Offscreen_Buffer buffer, HDC deviceContext, int windowWidth, int windowHeight)
 {
-	int windowWidth = windowRect->right - windowRect->left;
-	int windowHeight = windowRect->bottom - windowRect->top;
 	StretchDIBits(deviceContext,
-				  0, 0, bitmapWidth, bitmapHeight,
+				  0, 0, buffer.width, buffer.height,
 				  0, 0, windowWidth, windowHeight,
-				  bitmapMemory,
-				  &bitmapInfo,
+				  buffer.memory,
+				  &buffer.info,
 				  DIB_RGB_COLORS,
 				  SRCCOPY);
+}
+
+
+void Win32ProcessCmdLineArguments(int numArgs, LPWSTR* commandLineArray)
+{
+	// TODO: maybe optimize it
+	// do something with recieve command line arguments
+	for (int i = 0; i < numArgs; i++)
+	{
+		if (wcscmp(commandLineArray[i], L"cmd") == 0)
+		{
+			con::InitConsole();
+		}
+	}
 }
 
 LRESULT CALLBACK Win32MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -105,11 +139,8 @@ LRESULT CALLBACK Win32MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 		case WM_SIZE:
 		{
 			// handle window resizing. Also calls when window created
-			RECT clientRect = {};
-			GetClientRect(hWnd, &clientRect);
-			int width = clientRect.right - clientRect.left;
-			int height = clientRect.bottom - clientRect.top;
-			Win32ResizeDIBSection(width, height);
+			Win32_Window_Dimension dimension = Win32GetWindowDimension(hWnd);
+			Win32ResizeDIBSection(&backbuffer, dimension.width, dimension.height);
 		} break;
 
 		default:
@@ -122,14 +153,17 @@ LRESULT CALLBACK Win32MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
-	// TODO check for OS version
-	// set DPI awarness context
-	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
 	// num args of CMDLine
 	int numArgs = 0;
 	// getting an array of CMD parameters. [0] is always absolute .exe file name
-	CommandLineToArgvW(GetCommandLineW(), &numArgs);
+	LPWSTR* commandLineArray = CommandLineToArgvW(GetCommandLineW(), &numArgs);
+
+	// process cmd line param
+	Win32ProcessCmdLineArguments(numArgs, commandLineArray);
+
+	// TODO: check for OS version
+	// set DPI awarness context
+	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
 	// load icon
 	HICON icon = (HICON)LoadImageW(NULL, L"..//res//icon.ico", IMAGE_ICON, NULL, NULL, LR_LOADFROMFILE | LR_DEFAULTSIZE);
@@ -183,13 +217,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	}
 
 	HDC deviceContext = GetDC(hMainWnd);
-	RECT clientRect = {};
 
 	int xOffset = 0;
 	int yOffset = 0;
 
 	while (true)
 	{
+		// maybe place MSG in while loop before PeekMessage()
 		if (PeekMessageW(&msg, 0, 0, 0, PM_REMOVE))
 		{
 			if (msg.message == WM_QUIT)
@@ -201,9 +235,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		}
 
 		// Render some graphics
-		RenderWeirdGradient(xOffset, yOffset);
-		GetClientRect(hMainWnd, &clientRect);
-		Win32UpdateWindow(deviceContext, &clientRect);
+		Win32_Window_Dimension dimension = Win32GetWindowDimension(hMainWnd);
+		RenderWeirdGradient(backbuffer, xOffset, yOffset);
+		Win32DisplayBufferInWindow(backbuffer, deviceContext, dimension.width, dimension.height);
 		xOffset++;
 		yOffset++;
 	}
