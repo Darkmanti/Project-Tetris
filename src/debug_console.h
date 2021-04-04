@@ -7,11 +7,30 @@
 
 #ifdef WIN32
 #define WRITE_CONSOLE(handle, str, length) WriteConsoleW(handle, str, length, NULL, NULL)
+#define DebugBreakpoint() __debugbreak()
 #endif
 
-#ifdef linux
-#define 
+// TODO: make message box assertion
+// TODO: move assertion to another file
+#ifdef ASSERTION_ENABLED
+#define ASSERT(expr, ...) \
+		if(expr) {} \
+		else \
+		{ \
+			con::LogAssert(__FILE__, __func__, __LINE__, #expr, __VA_ARGS__);\
+			DebugBreakpoint(); \
+		}
+#else
+#define ASSERT(expr) // doing nothing
 #endif
+
+#ifdef ASSERTION_SLOW_ENABLED
+#define ASSERT_SLOW ASSERT
+#else
+#define ASSERT_SLOW(expr) // doing nothing
+#endif
+
+#define invalid_default() default:{ASSERT(false);}
 
 namespace con
 {
@@ -33,4 +52,7 @@ namespace con
 	void Out(double value);
 
 	void Outf(const wchar_t* string, ...);
+
+	inline void LogAssert(const char* file, const char* func, u32 line, const char* expr, const wchar_t* fmt, ...);
+	inline void LogAssert(const char* file, const char* func, u32 line, const char* expr);
 }

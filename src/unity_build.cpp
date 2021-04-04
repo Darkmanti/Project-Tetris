@@ -1,7 +1,11 @@
-// define some usefull macros
+// define some useful macros
 #define	internal static
 
-// define the unicode char-set
+// define debug definitions
+#define ASSERTION_ENABLED
+#define ASSERTION_SLOW_ENABLED
+
+// define the Unicode char-set
 #ifndef UNICODE
 #define UNICODE
 #endif 
@@ -12,9 +16,9 @@
 // main file with program entry point
 #include "main.cpp"
 
-// platform layer fo windows
+// platform layer for windows
 #include "win_platform.cpp"
 
 // TODO: maybe make it detachable
-// dbug console for debuging
+// debug console for debugging
 #include "debug_console.cpp"

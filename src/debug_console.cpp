@@ -232,8 +232,7 @@ namespace con
 						}
 						i = i + 1;
 					} break;
-				// TODO: add assertion invalid_default
-				//invalid_default()
+				invalid_default()
 				}
 				i = i + 2;
 			}
@@ -245,6 +244,42 @@ namespace con
 		}
 		WRITE_CONSOLE(hConsole, result, wcslen(result));
 		va_end(args);
+	}
+
+	inline void LogAssert(const char* _file, const char* _func, u32 line, const char* _expr, const wchar_t* fmt, ...)
+	{
+		wchar_t file[256] = L"";
+		wchar_t func[256] = L"";
+		wchar_t expr[256] = L"";
+		mbstowcs(file, _file, 256);
+		mbstowcs(func, _func, 256);
+		mbstowcs(expr, _expr, 256);
+		SetConColor(FOREGROUND_RED);
+		Outf(L"[Assertion failed] ");
+		SetConColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+		Outf(L"Expression (%s) result is false\n", expr);
+		Outf(L"File: \"%s\"\nfunction: %s, line: %i.\n", file, func, line);
+
+		// TODO: output parameters, now this is just a garbage
+		va_list args;
+		va_start(args, fmt);
+		Outf(fmt, args);
+		va_end(args);
+	}
+
+	inline void LogAssert(const char* _file, const char* _func, u32 line, const char* _expr)
+	{
+		wchar_t file[256] = L"";
+		wchar_t func[256] = L"";
+		wchar_t expr[256] = L"";
+		mbstowcs(file, _file, 256);
+		mbstowcs(func, _func, 256);
+		mbstowcs(expr, _expr, 256);
+		SetConColor(FOREGROUND_RED);
+		Outf(L"[Assertion failed] ");
+		SetConColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+		Outf(L"Expression (%s) result is false\n", expr);
+		Outf(L"File: \"%s\"\nfunction: %s, line: %i.\n", file, func, line);
 	}
 }
 
