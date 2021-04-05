@@ -2,9 +2,9 @@
 #include "win_platform.h"
 #include "math.h"
 #include "debug_console.h"
+#include <Xinput.h>
 
 //init window on windows
-
 struct Win32__Bitmap_Offscreen_Buffer
 {
 	BITMAPINFO info;
@@ -20,7 +20,41 @@ struct Win32_Window_Dimension
 	int height;
 };
 
+// XInputGetState declare the stubs functions
+typedef DWORD (XInputGetStateProc)(DWORD dwUserIndex, XINPUT_STATE* pState);
+DWORD XInputGetStateStub(DWORD dwUserIndex, XINPUT_STATE* pState)
+{
+	return 0;
+}
+XInputGetStateProc* XInputGetState_ = XInputGetStateStub;
+#define XInputGetState XInputGetState_
+
+// XInputSetState declare the stubs functions
+typedef DWORD (XInputSetStateProc)(DWORD dwUserIndex, XINPUT_VIBRATION* pVibration);
+DWORD XInputSetStateStub(DWORD dwUserIndex, XINPUT_VIBRATION* pVibration)
+{
+	return 0;
+}
+XInputSetStateProc* XInputSetState_ = XInputSetStateStub;
+#define XInputSetState XInputSetState_
+
+void Win32LoadXInput()
+{
+	HMODULE hXInputLibrary = LoadLibraryW(L"Xinput1_4.dll");
+	if (hXInputLibrary)
+	{
+		XInputGetState = (XInputGetStateProc*)GetProcAddress(hXInputLibrary, "XInputGetState");
+		XInputSetState = (XInputSetStateProc*)GetProcAddress(hXInputLibrary, "XInputSetState");
+	}
+	else
+	{
+		MessageBoxW(NULL, L"Cannot load Xinput1_4.dll", L"error", MB_OK);
+	}
+}
+
+
 HWND hMainWnd = {};
+// Should move this variable to main loop
 MSG msg = {};
 Win32__Bitmap_Offscreen_Buffer backbuffer;
 
@@ -35,13 +69,13 @@ Win32_Window_Dimension Win32GetWindowDimension(HWND hWnd)
 	return rect;
 }
 
-void RenderWeirdGradient(Win32__Bitmap_Offscreen_Buffer buffer, int xOffset, int yOffset)
+void RenderWeirdGradient(Win32__Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset)
 {
-	u8* row = (u8*)buffer.memory;
-	for (int y = 0; y < buffer.height; ++y)
+	u8* row = (u8*)buffer->memory;
+	for (int y = 0; y < buffer->height; ++y)
 	{
 		u32* pixel = (u32*)row;
-		for (int x = 0; x < buffer.width; ++x)
+		for (int x = 0; x < buffer->width; ++x)
 		{
 			u8 red = 0;
 			u8 green = (y + yOffset);
@@ -51,7 +85,7 @@ void RenderWeirdGradient(Win32__Bitmap_Offscreen_Buffer buffer, int xOffset, int
 			*pixel++ = (blue | (green << 8) | (red << 16) | (reserv << 24));
 		}
 
-		row += buffer.pitch;
+		row += buffer->pitch;
 	}
 }
 
@@ -79,13 +113,13 @@ void Win32ResizeDIBSection(Win32__Bitmap_Offscreen_Buffer* buffer, int width, in
 	buffer->pitch = buffer->width * bytesPerPixel;
 }
 
-void Win32DisplayBufferInWindow(Win32__Bitmap_Offscreen_Buffer buffer, HDC deviceContext, int windowWidth, int windowHeight)
+void Win32DisplayBufferInWindow(Win32__Bitmap_Offscreen_Buffer* buffer, HDC deviceContext, int windowWidth, int windowHeight)
 {
 	StretchDIBits(deviceContext,
-				  0, 0, buffer.width, buffer.height,
+				  0, 0, buffer->width, buffer->height,
 				  0, 0, windowWidth, windowHeight,
-				  buffer.memory,
-				  &buffer.info,
+				  buffer->memory,
+				  &buffer->info,
 				  DIB_RGB_COLORS,
 				  SRCCOPY);
 }
@@ -143,6 +177,14 @@ LRESULT CALLBACK Win32MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 			Win32ResizeDIBSection(&backbuffer, dimension.width, dimension.height);
 		} break;
 
+		case WM_KEYDOWN:
+		{
+			if (wParam == VK_ESCAPE)
+			{
+				PostQuitMessage(NULL);
+			}
+		} break;
+
 		default:
 		{
 			return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -167,6 +209,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	// load icon
 	HICON icon = (HICON)LoadImageW(NULL, L"..//res//icon.ico", IMAGE_ICON, NULL, NULL, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+
+	// Load XInput function
+	Win32LoadXInput();
 
 	WNDCLASSEXW mainWndClass = {
 		sizeof(WNDCLASSEXW),				// UINT      cbSize;
@@ -234,12 +279,74 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 			DispatchMessageW(&msg);
 		}
 
+		// Implemented some control
+		for (DWORD controllerIndex = 0; controllerIndex < XUSER_MAX_COUNT; controllerIndex++)
+		{
+			XINPUT_STATE controllerState;
+			ZeroMemory(&controllerState, sizeof(XINPUT_STATE));
+
+			// Check for gamepad plugged in
+			if (XInputGetState(controllerIndex, &controllerState) == ERROR_SUCCESS)
+			{
+				// This Controller is connected
+				//con::Outf(L"%ul contorller is connected\n", controllerIndex);
+				XINPUT_GAMEPAD* pad = &controllerState.Gamepad;
+				bool DPAD_UP =			(pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+				bool DPAD_DOWN =		(pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
+				bool DPAD_LEFT =		(pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
+				bool DPAD_RIGHT =		(pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
+				bool START =			(pad->wButtons & XINPUT_GAMEPAD_START);
+				bool BACK =				(pad->wButtons & XINPUT_GAMEPAD_BACK);
+				bool LEFT_THUMB =		(pad->wButtons & XINPUT_GAMEPAD_LEFT_THUMB);
+				bool RIGHT_THUMB =		(pad->wButtons & XINPUT_GAMEPAD_RIGHT_THUMB);
+				bool LEFT_SHOULDER =	(pad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+				bool RIGHT_SHOULDER =	(pad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
+				bool A =				(pad->wButtons & XINPUT_GAMEPAD_A);
+				bool B =				(pad->wButtons & XINPUT_GAMEPAD_B);
+				bool X =				(pad->wButtons & XINPUT_GAMEPAD_X);
+				bool Y =				(pad->wButtons & XINPUT_GAMEPAD_Y);
+
+				BYTE  bLeftTrigger = pad->bLeftTrigger;
+				BYTE  bRightTrigger = pad->bRightTrigger;
+				SHORT sThumbLX = pad->sThumbLX;
+				SHORT sThumbLY = pad->sThumbLY;
+				SHORT sThumbRX = pad->sThumbRX;
+				SHORT sThumbRY = pad->sThumbRY;
+
+				if (sThumbLX > XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE || sThumbLX < -XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)
+				{
+					float relativeValue = (float)(sThumbLX - (-32'768)) / (float)65'535;
+					int scaledValue = relativeValue * 30 - 15;
+					xOffset += scaledValue;
+				}
+				if (sThumbLY > XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE || sThumbLY < -XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE)
+				{
+					float relativeValue = (float)(sThumbLY - (-32'768)) / (float)65'535;
+					int scaledValue = relativeValue * 30 - 15;
+					yOffset -= scaledValue;
+				}
+
+				/*
+				XINPUT_VIBRATION vibration;
+				ZeroMemory(&vibration, sizeof(XINPUT_VIBRATION));
+				vibration.wRightMotorSpeed = 60000; // use any value between 0-65535 here
+				vibration.wLeftMotorSpeed = 60000; // use any value between 0-65535 here
+				XInputSetState(controllerIndex, &vibration);
+				*/
+			}
+			else
+			{
+				// This Controller is not connected
+				//con::Outf(L"%ul contorller is not connected\n", controllerIndex);
+			}
+		}
+
 		// Render some graphics
 		Win32_Window_Dimension dimension = Win32GetWindowDimension(hMainWnd);
-		RenderWeirdGradient(backbuffer, xOffset, yOffset);
-		Win32DisplayBufferInWindow(backbuffer, deviceContext, dimension.width, dimension.height);
-		xOffset++;
-		yOffset++;
+		RenderWeirdGradient(&backbuffer, xOffset, yOffset);
+		Win32DisplayBufferInWindow(&backbuffer, deviceContext, dimension.width, dimension.height);
+		//xOffset++;
+		//yOffset++;
 	}
 
 	// init other thing

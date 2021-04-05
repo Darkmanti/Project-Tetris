@@ -30,7 +30,7 @@
 #define ASSERT_SLOW(expr) // doing nothing
 #endif
 
-#define invalid_default() default:{ASSERT(false);}
+#define invalid_default default:{ASSERT(false);}
 
 namespace con
 {
@@ -46,6 +46,7 @@ namespace con
 	void Out(unsigned int value);
 	void Out(short value);
 	void Out(unsigned short value);
+	void Out(unsigned long value);
 	void Out(long long value);
 	void Out(unsigned long long value);
 	void Out(float value);

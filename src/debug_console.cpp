@@ -65,6 +65,13 @@ namespace con
 		_itow(value, string, 10);
 		WRITE_CONSOLE(hConsole, string, wcslen(string));
 	}
+
+	void Out(unsigned long value)
+	{
+		wchar_t string[12];
+		_ultow(value, string, 10);
+		WRITE_CONSOLE(hConsole, string, wcslen(string));
+	}
 	
 	void Out(long long value)
 	{
@@ -121,6 +128,18 @@ namespace con
 					{
 						_itow(va_arg(args, int), temp, 10);
 						wcscat(result, temp);
+					} break;
+					case 'u':
+					{
+						switch (string[i + 2])
+						{
+							case 'l':
+							{
+								_i64tow(va_arg(args, unsigned long), temp, 10);
+								wcscat(result, temp);
+							}
+						}
+						i = i + 1;
 					} break;
 					case 'f':
 					{
@@ -184,8 +203,7 @@ namespace con
 									wcscat(result, string);
 								}
 							} break;
-							// invalid default
-							default:{}
+							invalid_default
 						}
 						i = i + 1;
 					} break;
@@ -232,7 +250,7 @@ namespace con
 						}
 						i = i + 1;
 					} break;
-				invalid_default()
+				invalid_default
 				}
 				i = i + 2;
 			}
