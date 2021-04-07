@@ -279,6 +279,9 @@ namespace con
 		Outf(L"File: \"%s\"\nfunction: %s, line: %i.\n", file, func, line);
 
 		// TODO: output parameters, now this is just a garbage
+		SetConColor(FOREGROUND_RED | FOREGROUND_GREEN);
+		Outf(L"[Message] ");
+		SetConColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 		va_list args;
 		va_start(args, fmt);
 		Outf(fmt, args);

@@ -19,6 +19,6 @@
 // platform layer for windows
 #include "win_platform.cpp"
 
-// TODO: maybe make it detachable
+// TODO: make it detachable
 // debug console for debugging
 #include "debug_console.cpp"

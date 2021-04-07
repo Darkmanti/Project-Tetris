@@ -3,6 +3,11 @@
 #include "math.h"
 #include "debug_console.h"
 #include <Xinput.h>
+#include <dsound.h>
+
+// TODO: Think about use this, instead <dsound.h>
+// or use are both
+#include <xaudio2.h>
 
 //init window on windows
 struct Win32__Bitmap_Offscreen_Buffer
@@ -20,11 +25,12 @@ struct Win32_Window_Dimension
 	int height;
 };
 
+// XInput definitions
 // XInputGetState declare the stubs functions
 typedef DWORD (XInputGetStateProc)(DWORD dwUserIndex, XINPUT_STATE* pState);
 DWORD XInputGetStateStub(DWORD dwUserIndex, XINPUT_STATE* pState)
 {
-	return 0;
+	return ERROR_DEVICE_NOT_CONNECTED;
 }
 XInputGetStateProc* XInputGetState_ = XInputGetStateStub;
 #define XInputGetState XInputGetState_
@@ -33,22 +39,125 @@ XInputGetStateProc* XInputGetState_ = XInputGetStateStub;
 typedef DWORD (XInputSetStateProc)(DWORD dwUserIndex, XINPUT_VIBRATION* pVibration);
 DWORD XInputSetStateStub(DWORD dwUserIndex, XINPUT_VIBRATION* pVibration)
 {
-	return 0;
+	return ERROR_DEVICE_NOT_CONNECTED;
 }
 XInputSetStateProc* XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
+// TODO: add some functions in this case
 void Win32LoadXInput()
 {
 	HMODULE hXInputLibrary = LoadLibraryW(L"Xinput1_4.dll");
 	if (hXInputLibrary)
 	{
 		XInputGetState = (XInputGetStateProc*)GetProcAddress(hXInputLibrary, "XInputGetState");
+		if (!XInputGetState) { XInputGetState = XInputGetStateStub; }
+
 		XInputSetState = (XInputSetStateProc*)GetProcAddress(hXInputLibrary, "XInputSetState");
+		if (!XInputSetState) { XInputSetState = XInputSetStateStub; }
 	}
 	else
 	{
 		MessageBoxW(NULL, L"Cannot load Xinput1_4.dll", L"error", MB_OK);
+	}
+}
+
+// DurectSound definitions
+typedef HRESULT(DirectSoundCreateProc)(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN  pUnkOuter);
+
+//HRESULT DirectSoundCreate(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN  pUnkOuter);
+
+void Win32InitDSound(HWND window, DWORD samplesPerSecond, DWORD bufferSize)
+{
+	// Load the library
+	HMODULE hDSoundLibrary = LoadLibraryW(L"dsound.dll");
+
+	if (hDSoundLibrary)
+	{
+		// Get a DirectSound object
+		DirectSoundCreateProc* DirectSoundCreate = (DirectSoundCreateProc*)GetProcAddress(hDSoundLibrary, "DirectSoundCreate");
+
+		LPDIRECTSOUND directSound;
+		if (DirectSoundCreate && SUCCEEDED(DirectSoundCreate(NULL, &directSound, NULL)))
+		{
+			// Create wave format
+			WORD nChannels = 2;
+			WORD wBitsPerSample = 16;
+			WORD nBlockAlign = (wBitsPerSample * nChannels) / 8;
+			WAVEFORMATEX waveFormat = {
+				WAVE_FORMAT_PCM,				//For one - or two - channel PCM data, this value should be
+				nChannels,						// Number of channels in the waveform-audio data
+				samplesPerSecond,				// Sample rate, in samples per second (hertz)
+				samplesPerSecond * nBlockAlign,	// Required average data-transfer rate, in bytes per second, for the format tag product of nSamplesPerSec and nBlockAlign
+				nBlockAlign,					// Block alignment, in bytes. nChannels and wBitsPerSample divided by 8
+				wBitsPerSample,					// Bits per sample for the wFormatTag format type. If WAVE_FORMAT_PCM then 8 or 16
+				0								// For WAVE_FORMAT_PCM formats (and only WAVE_FORMAT_PCM formats), this member is ignored
+			};
+
+			if (SUCCEEDED(directSound->SetCooperativeLevel(window, DSSCL_PRIORITY))) // try NORMAL
+			{
+				DSBUFFERDESC bufferDescription = {
+					sizeof(bufferDescription),	// Size of the structure, in bytes
+					DSBCAPS_PRIMARYBUFFER,		// Flags specifying the capabilities of the buffer
+					NULL,						// his value must be 0 when creating a buffer with the DSBCAPS_PRIMARYBUFFER flag
+					NULL,						// Reserved must be 0
+					NULL,						// This value must be NULL for primary buffers.
+					DS3DALG_DEFAULT				// DSBCAPS_CTRL3D is not set in dwFlags, this member must be GUID_NULL (DS3DALG_DEFAULT)
+				};
+
+				// Create a primary buffer
+				LPDIRECTSOUNDBUFFER primaryBuffer = {};
+				if (SUCCEEDED(directSound->CreateSoundBuffer(&bufferDescription, &primaryBuffer, NULL)))
+				{
+					if (SUCCEEDED(primaryBuffer->SetFormat(&waveFormat)))
+					{
+						// We have finally set the format
+						con::Outf(L"Primary buffer format was set\n");
+					}
+					else
+					{
+						// TODO: Diagnostic
+					}
+				}
+				else
+				{
+					// TODO: Diagnostic
+				}
+			}
+			else
+			{
+				// TODO: Diagnostic
+			}
+
+			// Create a secondary buffer
+			DSBUFFERDESC bufferDescription = {
+					sizeof(bufferDescription),	// Size of the structure, in bytes
+					NULL,						// Flags specifying the capabilities of the buffer
+					bufferSize,					// his value must be 0 when creating a buffer with the DSBCAPS_PRIMARYBUFFER flag
+					NULL,						// Reserved must be 0
+					&waveFormat,				// This value must be NULL for primary buffers.
+					DS3DALG_DEFAULT				// DSBCAPS_CTRL3D is not set in dwFlags, this member must be GUID_NULL (DS3DALG_DEFAULT)
+			};
+
+			LPDIRECTSOUNDBUFFER secondaryBuffer = {};
+			if (SUCCEEDED(directSound->CreateSoundBuffer(&bufferDescription, &secondaryBuffer, NULL)))
+			{
+				// Start it playing
+				con::Outf(L"Secondary buffer created successfully\n");
+			}
+			else
+			{
+				// TODO: Diagnostic
+			}
+		}
+		else
+		{
+			// TODO: Diagnostic
+		}
+	}
+	else
+	{
+		MessageBoxW(NULL, L"Cannot load dsound.dll", L"error", MB_OK);
 	}
 }
 
@@ -129,7 +238,7 @@ void Win32ProcessCmdLineArguments(int numArgs, LPWSTR* commandLineArray)
 {
 	// TODO: maybe optimize it
 	// do something with recieve command line arguments
-	for (int i = 0; i < numArgs; i++)
+	for (int i = 1; i < numArgs; i++)
 	{
 		if (wcscmp(commandLineArray[i], L"cmd") == 0)
 		{
@@ -180,6 +289,15 @@ LRESULT CALLBACK Win32MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 		case WM_KEYDOWN:
 		{
 			if (wParam == VK_ESCAPE)
+			{
+				PostQuitMessage(NULL);
+			}
+		} break;
+
+		// TODO: maybe this is redundantly
+		case WM_SYSKEYDOWN:
+		{
+			if (wParam == VK_F4)
 			{
 				PostQuitMessage(NULL);
 			}
@@ -265,6 +383,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	int xOffset = 0;
 	int yOffset = 0;
+
+	Win32InitDSound(hMainWnd, 48000, 48000 * sizeof(i16) * 2);
 
 	while (true)
 	{
