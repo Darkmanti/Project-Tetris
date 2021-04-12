@@ -4,7 +4,7 @@ IF "%1" EQU "/?" goto Help
 
 set SrcFile="%cd%\src\unity_build.cpp"
 
-set AddLib=User32.lib Shell32.lib Gdi32.lib
+set AddLib=User32.lib Shell32.lib Gdi32.lib Ole32.lib
 set AddDll=
 
 set BuildDir=build\
