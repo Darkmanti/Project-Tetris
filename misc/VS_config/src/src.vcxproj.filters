@@ -41,5 +41,8 @@
     <ClInclude Include="type_converter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="sound_file_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

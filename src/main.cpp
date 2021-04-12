@@ -9,9 +9,6 @@
 // Direct Sound some deprecated engine
 #include <dsound.h>
 
-// MCI audio. To use this need to plug "Winmm.lib" or "Winmm.dll"
-//#include <Mmsystem.h>
-
 // XAudio2 hopes are pinned on this new engine.
 #include <xaudio2.h>
 
@@ -506,10 +503,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	int xOffset = 0;
 	int yOffset = 0;
-
-	// MCI sound testing. This not looping. Working with .mp3 and .wav
-	//mciSendStringW(L"open \"../res/RawRes/blade.wav\" alias blade_sound", NULL, NULL, NULL);
-	//mciSendStringW(L"play blade_sound", NULL, NULL, NULL);
 
 	// XAudio2
 	Win32_XAudio2_Settings xAudio2Output = {};
