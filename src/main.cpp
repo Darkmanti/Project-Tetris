@@ -5,10 +5,6 @@
 #include <Xinput.h>
 #include <dsound.h>
 
-// TODO: Think about use this, instead <dsound.h>
-// or use are both
-#include <xaudio2.h>
-
 //init window on windows
 struct Win32__Bitmap_Offscreen_Buffer
 {
@@ -24,6 +20,13 @@ struct Win32_Window_Dimension
 	int width;
 	int height;
 };
+
+// some global variable
+HWND hMainWnd = {};
+// Should move this variable to main loop
+MSG msg = {};
+Win32__Bitmap_Offscreen_Buffer backbuffer;
+LPDIRECTSOUNDBUFFER secondaryBuffer;
 
 // XInput definitions
 // XInputGetState declare the stubs functions
@@ -48,6 +51,10 @@ XInputSetStateProc* XInputSetState_ = XInputSetStateStub;
 void Win32LoadXInput()
 {
 	HMODULE hXInputLibrary = LoadLibraryW(L"Xinput1_4.dll");
+	if (!hXInputLibrary)
+	{
+		hXInputLibrary = LoadLibraryW(L"Xinput1_3.dll");
+	}
 	if (hXInputLibrary)
 	{
 		XInputGetState = (XInputGetStateProc*)GetProcAddress(hXInputLibrary, "XInputGetState");
@@ -58,12 +65,12 @@ void Win32LoadXInput()
 	}
 	else
 	{
-		MessageBoxW(NULL, L"Cannot load Xinput1_4.dll", L"error", MB_OK);
+		MessageBoxW(NULL, L"Cannot load Xinput1_4.dll or Xinput1_3.dll", L"error", MB_OK);
 	}
 }
 
 // DurectSound definitions
-typedef HRESULT(DirectSoundCreateProc)(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN  pUnkOuter);
+typedef HRESULT(DirectSoundCreate8Proc)(LPCGUID lpcGuidDevice, LPDIRECTSOUND8* ppDS8, LPUNKNOWN pUnkOuter);
 
 //HRESULT DirectSoundCreate(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN  pUnkOuter);
 
@@ -75,10 +82,10 @@ void Win32InitDSound(HWND window, DWORD samplesPerSecond, DWORD bufferSize)
 	if (hDSoundLibrary)
 	{
 		// Get a DirectSound object
-		DirectSoundCreateProc* DirectSoundCreate = (DirectSoundCreateProc*)GetProcAddress(hDSoundLibrary, "DirectSoundCreate");
+		DirectSoundCreate8Proc* DirectSoundCreate8 = (DirectSoundCreate8Proc*)GetProcAddress(hDSoundLibrary, "DirectSoundCreate8");
 
-		LPDIRECTSOUND directSound;
-		if (DirectSoundCreate && SUCCEEDED(DirectSoundCreate(NULL, &directSound, NULL)))
+		LPDIRECTSOUND8 directSound;
+		if (DirectSoundCreate8 && SUCCEEDED(DirectSoundCreate8(NULL, &directSound, NULL)))
 		{
 			// Create wave format
 			WORD nChannels = 2;
@@ -97,12 +104,12 @@ void Win32InitDSound(HWND window, DWORD samplesPerSecond, DWORD bufferSize)
 			if (SUCCEEDED(directSound->SetCooperativeLevel(window, DSSCL_PRIORITY))) // try NORMAL
 			{
 				DSBUFFERDESC bufferDescription = {
-					sizeof(bufferDescription),	// Size of the structure, in bytes
-					DSBCAPS_PRIMARYBUFFER,		// Flags specifying the capabilities of the buffer
-					NULL,						// his value must be 0 when creating a buffer with the DSBCAPS_PRIMARYBUFFER flag
-					NULL,						// Reserved must be 0
-					NULL,						// This value must be NULL for primary buffers.
-					DS3DALG_DEFAULT				// DSBCAPS_CTRL3D is not set in dwFlags, this member must be GUID_NULL (DS3DALG_DEFAULT)
+					sizeof(bufferDescription),						// Size of the structure, in bytes
+					DSBCAPS_PRIMARYBUFFER | DSBCAPS_CTRLVOLUME,		// Flags specifying the capabilities of the buffer
+					NULL,											// his value must be 0 when creating a buffer with the DSBCAPS_PRIMARYBUFFER flag
+					NULL,											// Reserved must be 0
+					NULL,											// This value must be NULL for primary buffers.
+					DS3DALG_DEFAULT									// DSBCAPS_CTRL3D is not set in dwFlags, this member must be GUID_NULL (DS3DALG_DEFAULT)
 				};
 
 				// Create a primary buffer
@@ -131,15 +138,14 @@ void Win32InitDSound(HWND window, DWORD samplesPerSecond, DWORD bufferSize)
 
 			// Create a secondary buffer
 			DSBUFFERDESC bufferDescription = {
-					sizeof(bufferDescription),	// Size of the structure, in bytes
-					NULL,						// Flags specifying the capabilities of the buffer
-					bufferSize,					// his value must be 0 when creating a buffer with the DSBCAPS_PRIMARYBUFFER flag
-					NULL,						// Reserved must be 0
-					&waveFormat,				// This value must be NULL for primary buffers.
-					DS3DALG_DEFAULT				// DSBCAPS_CTRL3D is not set in dwFlags, this member must be GUID_NULL (DS3DALG_DEFAULT)
+					sizeof(bufferDescription),					// Size of the structure, in bytes
+					DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLPAN,		// Flags specifying the capabilities of the buffer
+					bufferSize,									// his value must be 0 when creating a buffer with the DSBCAPS_PRIMARYBUFFER flag
+					NULL,										// Reserved must be 0
+					&waveFormat,								// This value must be NULL for primary buffers.
+					DS3DALG_DEFAULT								// DSBCAPS_CTRL3D is not set in dwFlags, this member must be GUID_NULL (DS3DALG_DEFAULT)
 			};
 
-			LPDIRECTSOUNDBUFFER secondaryBuffer = {};
 			if (SUCCEEDED(directSound->CreateSoundBuffer(&bufferDescription, &secondaryBuffer, NULL)))
 			{
 				// Start it playing
@@ -160,12 +166,6 @@ void Win32InitDSound(HWND window, DWORD samplesPerSecond, DWORD bufferSize)
 		MessageBoxW(NULL, L"Cannot load dsound.dll", L"error", MB_OK);
 	}
 }
-
-
-HWND hMainWnd = {};
-// Should move this variable to main loop
-MSG msg = {};
-Win32__Bitmap_Offscreen_Buffer backbuffer;
 
 Win32_Window_Dimension Win32GetWindowDimension(HWND hWnd)
 {
@@ -211,7 +211,7 @@ void Win32ResizeDIBSection(Win32__Bitmap_Offscreen_Buffer* buffer, int width, in
 
 	buffer->info.bmiHeader.biSize = sizeof(buffer->info.bmiHeader);
 	buffer->info.bmiHeader.biWidth = buffer->width;
-	buffer->info.bmiHeader.biHeight = -buffer->height;
+	buffer->info.bmiHeader.biHeight = -buffer->height; // "-" flipping of vertical
 	buffer->info.bmiHeader.biPlanes = 1;
 	buffer->info.bmiHeader.biBitCount = 32;
 	buffer->info.bmiHeader.biCompression = BI_RGB;
@@ -379,13 +379,37 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		return NULL;
 	}
 
+	// init other thing
+
 	HDC deviceContext = GetDC(hMainWnd);
 
 	int xOffset = 0;
 	int yOffset = 0;
+	int samplesPerSecond = 48000;
+	int toneHz = 200;
+	int toneVolume = 2000;
+	u32 runningSampleIndex = 0;
+	int wavePeriod = samplesPerSecond / toneHz;
+	//int halfWavePeriod = wavePeriod / 2;
+	int bytesPerSample = sizeof(i16) * 2;
+	int secondaryBufferSize = samplesPerSecond * bytesPerSample;
 
-	Win32InitDSound(hMainWnd, 48000, 48000 * sizeof(i16) * 2);
+	bool soundIsPlaying = false;
 
+	Win32InitDSound(hMainWnd, samplesPerSecond, secondaryBufferSize);
+
+	/*void* region1;
+	DWORD region1Size;
+	secondaryBuffer->Lock(0, secondaryBufferSize, &region1, &region1Size, NULL, NULL, DSBLOCK_ENTIREBUFFER);
+	i16* out = (i16*)region1;
+	for (int i = 0; i < region1Size / bytesPerSample; i++)
+	{
+		*out++ = rand() % 10000;
+		*out++ = rand() % 10000;
+	}
+	secondaryBuffer->Unlock(region1, region1Size, NULL, NULL);*/
+
+	// run the game
 	while (true)
 	{
 		// maybe place MSG in while loop before PeekMessage()
@@ -465,13 +489,70 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		Win32_Window_Dimension dimension = Win32GetWindowDimension(hMainWnd);
 		RenderWeirdGradient(&backbuffer, xOffset, yOffset);
 		Win32DisplayBufferInWindow(&backbuffer, deviceContext, dimension.width, dimension.height);
-		//xOffset++;
-		//yOffset++;
+		
+		// DirectSound test
+		DWORD playCursorPosition;
+		DWORD writeCursorPosition;
+		if (SUCCEEDED(secondaryBuffer->GetCurrentPosition(&playCursorPosition, &writeCursorPosition)))
+		{
+			DWORD bytesToLock = runningSampleIndex * bytesPerSample % secondaryBufferSize;
+			DWORD bytesToWrite;
+			if (bytesToLock == playCursorPosition)
+			{
+				bytesToWrite = secondaryBufferSize;
+			}
+			else if (bytesToLock > playCursorPosition)
+			{
+				bytesToWrite = secondaryBufferSize - bytesToLock;
+				bytesToWrite += playCursorPosition;
+			}
+			else
+			{
+				bytesToWrite = playCursorPosition - bytesToLock;
+			}
+
+			void* region1;
+			DWORD region1Size;
+			void* region2;
+			DWORD region2Size;
+
+			if (SUCCEEDED(secondaryBuffer->Lock(bytesToLock, bytesToWrite, &region1, &region1Size, &region2, &region2Size, NULL)))
+			{
+				i16* sampleOut = (i16*)region1;
+				DWORD region1SampleCount = region1Size / bytesPerSample;
+
+				for (DWORD sampleIndex = 0; sampleIndex < region1SampleCount; sampleIndex++)
+				{
+					f32 t = 2.0f * PI_32 * (f32)runningSampleIndex / (f32)wavePeriod;
+					f32 sineValue = Sin(t);
+					i16 sampleValue = (i16)(sineValue * toneVolume);
+					*sampleOut++ = sampleValue;
+					*sampleOut++ = sampleValue;
+					runningSampleIndex++;
+				}
+
+				sampleOut = (i16*)region2;
+				DWORD region2SampleCount = region2Size / bytesPerSample;
+				for (DWORD sampleIndex = 0; sampleIndex < region2SampleCount; sampleIndex++)
+				{
+					f32 t = 2.0f * PI_32 * (f32)runningSampleIndex / (f32)wavePeriod;
+					f32 sineValue = Sin(t);
+					i16 sampleValue = (i16)(sineValue * toneVolume);
+					*sampleOut++ = sampleValue;
+					*sampleOut++ = sampleValue;
+					runningSampleIndex++;
+				}
+
+				secondaryBuffer->Unlock(region1, region1Size, region2, region2Size);
+			}
+		}
+
+		if (!soundIsPlaying)
+		{
+			secondaryBuffer->Play(NULL, NULL, DSBPLAY_LOOPING);
+			soundIsPlaying = true;
+		}
 	}
-
-	// init other thing
-
-	// run the game
 
 	return 0;
 }
