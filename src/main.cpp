@@ -12,6 +12,9 @@
 // XAudio2 hopes are pinned on this new engine.
 #include <xaudio2.h>
 
+#define MILLI_SECOND(x) x * 1'000
+#define MICRO_SECOND(x) x * 1'000'000
+
 //init window on windows
 struct Win32__Bitmap_Offscreen_Buffer
 {
@@ -49,10 +52,27 @@ struct Win32_XAudio2_Settings
 HWND hMainWnd = {};
 // Should move this variable to main loop
 MSG msg = {};
-Win32__Bitmap_Offscreen_Buffer backbuffer;
+Win32__Bitmap_Offscreen_Buffer backbuffer = {};
+
+// time stamps
+LARGE_INTEGER perfFrequency = {};
 
 // Direct Sound
 LPDIRECTSOUNDBUFFER secondaryBuffer;
+
+__int64 GetTimeStampMicroSecond()
+{
+	LARGE_INTEGER time = {};
+	QueryPerformanceCounter(&time);
+	return ((MICRO_SECOND(time.QuadPart) / perfFrequency.QuadPart));
+}
+
+__int64 GetTimeStampMilliSecond()
+{
+	LARGE_INTEGER time = {};
+	QueryPerformanceCounter(&time);
+	return ((MILLI_SECOND(time.QuadPart) / perfFrequency.QuadPart));
+}
 
 // XInput definitions
 // XInputGetState declare the stubs functions
@@ -438,6 +458,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	// process cmd line param
 	Win32ProcessCmdLineArguments(numArgs, commandLineArray);
+
+	// set the performance frequency
+	QueryPerformanceFrequency(&perfFrequency);
 
 	// TODO: check for OS version
 	// set DPI awarness context

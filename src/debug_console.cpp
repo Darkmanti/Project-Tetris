@@ -126,20 +126,37 @@ namespace con
 					} break;
 					case 'i':
 					{
-						_itow(va_arg(args, int), temp, 10);
-						wcscat(result, temp);
+						switch (string[i + 2])
+						{
+							case '3':
+							{
+								_itow(va_arg(args, int), temp, 10);
+								wcscat(result, temp);
+							} break;
+							case '6':
+							{
+								_i64tow(va_arg(args, long long), temp, 10);
+								wcscat(result, temp);
+							} break;
+						}
+						i = i + 2;
 					} break;
 					case 'u':
 					{
 						switch (string[i + 2])
 						{
-							case 'l':
+							case '3':
 							{
-								_i64tow(va_arg(args, unsigned long), temp, 10);
+								_ultow(va_arg(args, unsigned long), temp, 10);
 								wcscat(result, temp);
-							}
+							} break;
+							case '6':
+							{
+								_ui64tow(va_arg(args, unsigned long), temp, 10);
+								wcscat(result, temp);
+							} break;
 						}
-						i = i + 1;
+						i = i + 2;
 					} break;
 					case 'f':
 					{
@@ -158,15 +175,14 @@ namespace con
 								value = Transpose(value);
 								for (int i = 0; i < 4; i++)
 								{
-									wchar_t string[_CVTBUFSIZE + 1];
-									VoidFloatToWCHAR(value.data[i], string);
+									VoidFloatToWCHAR(value.data[i], temp);
 	
 									if (i == 1)
-										wcscat(string, L"\n");
+										wcscat(temp, L"\n");
 									else
-										wcscat(string, L" ");
+										wcscat(temp, L" ");
 	
-									wcscat(result, string);
+									wcscat(result, temp);
 								}
 							} break;
 							case '3':
@@ -175,15 +191,14 @@ namespace con
 								value = Transpose(value);
 								for (int i = 0; i < 9; i++)
 								{
-									wchar_t string[_CVTBUFSIZE + 1];
-									VoidFloatToWCHAR(value.data[i], string);
+									VoidFloatToWCHAR(value.data[i], temp);
 	
 									if (i == 2 || i == 5)
-										wcscat(string, L"\n");
+										wcscat(temp, L"\n");
 									else
-										wcscat(string, L" ");
+										wcscat(temp, L" ");
 	
-									wcscat(result, string);
+									wcscat(result, temp);
 								}
 							} break;
 							case '4':
@@ -192,15 +207,14 @@ namespace con
 								value = Transpose(value);
 								for (int i = 0; i < 16; i++)
 								{
-									wchar_t string[_CVTBUFSIZE + 1];
-									VoidFloatToWCHAR(value.data[i], string);
+									VoidFloatToWCHAR(value.data[i], temp);
 	
 									if (i == 3 || i == 7 || i == 11)
-										wcscat(string, L"\n");
+										wcscat(temp, L"\n");
 									else
-										wcscat(string, L" ");
+										wcscat(temp, L" ");
 	
-									wcscat(result, string);
+									wcscat(result, temp);
 								}
 							} break;
 							invalid_default
@@ -216,11 +230,10 @@ namespace con
 								v2 value = va_arg(args, v2);
 								for (int i = 0; i < 2; i++)
 								{
-									wchar_t string[_CVTBUFSIZE + 1];
-									VoidFloatToWCHAR(value.data[i], string);
+									VoidFloatToWCHAR(value.data[i], temp);
 									if (i != 1)
-										wcscat(string, L" ");
-									wcscat(result, string);
+										wcscat(temp, L" ");
+									wcscat(result, temp);
 								}
 							} break;
 							case '3':
@@ -228,11 +241,10 @@ namespace con
 								v3 value = va_arg(args, v3);
 								for (int i = 0; i < 3; i++)
 								{
-									wchar_t string[_CVTBUFSIZE + 1];
-									VoidFloatToWCHAR(value.data[i], string);
+									VoidFloatToWCHAR(value.data[i], temp);
 									if (i != 2)
-										wcscat(string, L" ");
-									wcscat(result, string);
+										wcscat(temp, L" ");
+									wcscat(result, temp);
 								}
 							} break;
 							case '4':
@@ -240,11 +252,10 @@ namespace con
 								v4 value = va_arg(args, v4);
 								for (int i = 0; i < 4; i++)
 								{
-									wchar_t string[_CVTBUFSIZE + 1];
-									VoidFloatToWCHAR(value.data[i], string);
+									VoidFloatToWCHAR(value.data[i], temp);
 									if (i != 3)
-										wcscat(string, L" ");
-									wcscat(result, string);
+										wcscat(temp, L" ");
+									wcscat(result, temp);
 								}
 							} break;
 						}
