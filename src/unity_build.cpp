@@ -16,8 +16,8 @@
 // main file with program entry point
 #include "main.cpp"
 
-// platform layer for windows
-#include "win_platform.cpp"
+// platform-independent layer
+#include "tetris.cpp"
 
 // TODO: make it detachable
 // debug console for debugging
