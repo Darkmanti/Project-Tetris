@@ -14,6 +14,13 @@
 
 // TODO: In the future, rendering _specifically_ will become a three-tiered abstraction!!!
 
+struct Sound_Output_Buffer
+{
+    int samplesPerSecond;
+    int sampleCount;
+    i16* samples;
+};
+
 struct Bitmap_Offscreen_Buffer
 {
     // pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
@@ -53,7 +60,7 @@ i64 controlDelay = 60;
 int currentFigure = -1;
 _Point centerCurrentFigure = { -1 };
 
-void GameUpdateAndRender(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset);
+void GameUpdateAndRender(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset, Sound_Output_Buffer* soundBuffer, int toneHz);
 
 void RenderTetrisGame(Bitmap_Offscreen_Buffer* buffer);
 void UpdateTetrisGame();

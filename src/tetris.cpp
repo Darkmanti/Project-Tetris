@@ -1,5 +1,23 @@
 #include "tetris.h"
 
+void GameOutputSound(Sound_Output_Buffer* soundBuffer, int toneHz)
+{
+	static f32 tSine;
+	i16 toneVolume = 3000;
+	int wavePeriod = soundBuffer->samplesPerSecond / toneHz;
+
+	i16* sampleOut = soundBuffer->samples;
+	for (int sampleIndex = 0; sampleIndex < soundBuffer->sampleCount; sampleIndex++)
+	{
+		f32 sineValue = Sin(tSine);
+		i16 sampleValue = (i16)(sineValue * toneVolume);
+		*sampleOut++ = sampleValue;
+		*sampleOut++ = sampleValue;
+
+		tSine += 2.0f * PI_32 * 1.0f / (f32)wavePeriod;
+	}
+}
+
 void RenderWeirdGradient(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset)
 {
 	u8* row = (u8*)buffer->memory;
@@ -20,9 +38,15 @@ void RenderWeirdGradient(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffs
 	}
 }
 
-void GameUpdateAndRender(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset)
+void GameUpdateAndRender(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset, Sound_Output_Buffer* soundBuffer, int toneHz)
 {
+	// Learnings
+	GameOutputSound(soundBuffer, toneHz);
 	RenderWeirdGradient(buffer, xOffset, yOffset);
+
+	// Tetris
+	UpdateTetrisGame();
+	RenderTetrisGame(buffer);
 }
 
 // Tetris

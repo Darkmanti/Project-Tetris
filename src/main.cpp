@@ -21,13 +21,13 @@
 */
 
 #include "tetris.h"
-
-#include <Windows.h>
 #include "math.h"
 #include "debug_console.h"
+#include "sound_file_loader.h"
+
+#include <Windows.h>
 #include <Xinput.h>
 
-#include "sound_file_loader.h"
 // sound engine three variants
 // Direct Sound some deprecated engine
 #include <dsound.h>
@@ -63,6 +63,8 @@ struct Win32_Sound_Output
 	int wavePeriod;
 	int bytesPerSample;
 	int secondaryBufferSize;
+	f32 tSine;
+	int latencySampleCount;
 };
 
 struct Win32_XAudio2_Settings
@@ -187,7 +189,7 @@ void Win32InitDSound(HWND window, DWORD samplesPerSecond, DWORD bufferSize)
 					if (SUCCEEDED(primaryBuffer->SetFormat(&waveFormat)))
 					{
 						// We have finally set the format
-						con::Outf(L"Primary buffer format was set\n");
+						//con::Outf(L"Primary buffer format was set\n");
 					}
 					else
 					{
@@ -217,7 +219,7 @@ void Win32InitDSound(HWND window, DWORD samplesPerSecond, DWORD bufferSize)
 			if (SUCCEEDED(directSound->CreateSoundBuffer(&bufferDescription, &secondaryBuffer, NULL)))
 			{
 				// Start it playing
-				con::Outf(L"Secondary buffer created successfully\n");
+				//con::Outf(L"Secondary buffer created successfully\n");
 			}
 			else
 			{
@@ -235,7 +237,31 @@ void Win32InitDSound(HWND window, DWORD samplesPerSecond, DWORD bufferSize)
 	}
 }
 
-void Win32FillSoundBuffer(Win32_Sound_Output* soundOutput, DWORD bytesToLock, DWORD bytesToWrite)
+void Win32ClearBuffer(Win32_Sound_Output* soundOutput)
+{
+	void* region1;
+	DWORD region1Size;
+	void* region2;
+	DWORD region2Size;
+	if (SUCCEEDED(secondaryBuffer->Lock(0, soundOutput->secondaryBufferSize, &region1, &region1Size, &region2, &region2Size, NULL)))
+	{
+		u8* destSample = (u8*)region1;
+		for (DWORD byteIndex = 0; byteIndex < region1Size; byteIndex++)
+		{
+			*destSample++ = 0;
+		}
+
+		destSample = (u8*)region2;
+		for (DWORD byteIndex = 0; byteIndex < region2Size; byteIndex++)
+		{
+			*destSample++ = 0;
+		}
+
+		secondaryBuffer->Unlock(region1, region1Size, region2, region2Size);
+	}
+}
+
+void Win32FillSoundBuffer(Win32_Sound_Output* soundOutput, DWORD bytesToLock, DWORD bytesToWrite, Sound_Output_Buffer* sourceBuffer)
 {
 	void* region1;
 	DWORD region1Size;
@@ -244,29 +270,23 @@ void Win32FillSoundBuffer(Win32_Sound_Output* soundOutput, DWORD bytesToLock, DW
 
 	if (SUCCEEDED(secondaryBuffer->Lock(bytesToLock, bytesToWrite, &region1, &region1Size, &region2, &region2Size, NULL)))
 	{
-		i16* sampleOut = (i16*)region1;
 		DWORD region1SampleCount = region1Size / soundOutput->bytesPerSample;
-
+		i16* destSample = (i16*)region1;
+		i16* sourceSample = sourceBuffer->samples;
 		for (DWORD sampleIndex = 0; sampleIndex < region1SampleCount; sampleIndex++)
 		{
-			f32 t = 2.0f * PI_32 * (f32)soundOutput->runningSampleIndex / (f32)soundOutput->wavePeriod;
-			f32 sineValue = Sin(t);
-			i16 sampleValue = (i16)(sineValue * soundOutput->toneVolume);
-			*sampleOut++ = sampleValue;
-			*sampleOut++ = sampleValue;
-			soundOutput->runningSampleIndex++;
+			*destSample++ = *sourceSample++;
+			*destSample++ = *sourceSample++;
+			++soundOutput->runningSampleIndex;
 		}
 
-		sampleOut = (i16*)region2;
 		DWORD region2SampleCount = region2Size / soundOutput->bytesPerSample;
+		destSample = (i16*)region2;
 		for (DWORD sampleIndex = 0; sampleIndex < region2SampleCount; sampleIndex++)
 		{
-			f32 t = 2.0f * PI_32 * (f32)soundOutput->runningSampleIndex / (f32)soundOutput->wavePeriod;
-			f32 sineValue = Sin(t);
-			i16 sampleValue = (i16)(sineValue * soundOutput->toneVolume);
-			*sampleOut++ = sampleValue;
-			*sampleOut++ = sampleValue;
-			soundOutput->runningSampleIndex++;
+			*destSample++ = *sourceSample++;
+			*destSample++ = *sourceSample++;
+			++soundOutput->runningSampleIndex;
 		}
 
 		secondaryBuffer->Unlock(region1, region1Size, region2, region2Size);
@@ -465,10 +485,20 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	// set the performance frequency
 	QueryPerformanceFrequency(&perfFrequency);
 
-	// TODO: check for OS version
 	// set DPI awarness context
-	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
+	if (IsValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2))
+	{
+		SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+	}
+	else if (IsValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE))
+	{
+		SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+	}
+	else
+	{
+		SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_SYSTEM_AWARE);
+	}
+	
 	// load icon
 	HICON icon = (HICON)LoadImageW(NULL, L"..//res//icon.ico", IMAGE_ICON, NULL, NULL, LR_LOADFROMFILE | LR_DEFAULTSIZE);
 
@@ -525,9 +555,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	// init other thing
 
-	// begin of Tetris init
+	// Set Tetris generation seed
+	// TODO: Move this from here
 	srand(GetTimeStampMilliSecond());
-	// end of Tetris init
 
 	HDC deviceContext = GetDC(hMainWnd);
 
@@ -548,20 +578,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	pSourceVoice->Start(0);
 
 	// Direct Sound testing
-	/*Win32_Sound_Output soundOutput = {};
+	Win32_Sound_Output soundOutput = {};
 
 	soundOutput.samplesPerSecond = 48000;
 	soundOutput.toneHz = 256;
-	soundOutput.toneVolume = 2000;
-	soundOutput.runningSampleIndex = 0;
+	soundOutput.toneVolume = 3000;
 	soundOutput.wavePeriod = soundOutput.samplesPerSecond / soundOutput.toneHz;
 	soundOutput.bytesPerSample = sizeof(i16) * 2;
 	soundOutput.secondaryBufferSize = soundOutput.samplesPerSecond * soundOutput.bytesPerSample;
+	soundOutput.latencySampleCount = soundOutput.samplesPerSecond / 15;
 
 	Win32InitDSound(hMainWnd, soundOutput.samplesPerSecond, soundOutput.secondaryBufferSize);
-	Win32FillSoundBuffer(&soundOutput, 0, soundOutput.secondaryBufferSize);
+	Win32ClearBuffer(&soundOutput);
+	secondaryBuffer->Play(NULL, NULL, DSBPLAY_LOOPING);
 
-	secondaryBuffer->Play(NULL, NULL, DSBPLAY_LOOPING);*/
+	i16* samples = (i16*)VirtualAlloc(NULL, soundOutput.secondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
 	// run the game
 	while (true)
@@ -577,7 +608,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 			DispatchMessageW(&msg);
 		}
 
-		// Implemented some control
+		// Implemented some XInput control
 		for (DWORD controllerIndex = 0; controllerIndex < XUSER_MAX_COUNT; controllerIndex++)
 		{
 			XINPUT_STATE controllerState;
@@ -624,6 +655,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 					yOffset -= scaledValue;
 				}
 
+				// direct sound sine wave
+				soundOutput.toneHz = 512 + (int)(256.0f * ((f32)sThumbLY / 30000.0f));
+				soundOutput.wavePeriod = soundOutput.samplesPerSecond / soundOutput.toneHz;
+
 				/*
 				XINPUT_VIBRATION vibration;
 				ZeroMemory(&vibration, sizeof(XINPUT_VIBRATION));
@@ -639,6 +674,39 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 			}
 		}
 
+		// Direct Sound testing
+		DWORD playCursorPosition = 0;
+		DWORD writeCursorPosition = 0;
+		DWORD bytesToLock = 0;
+		DWORD targetCursor = 0;
+		DWORD bytesToWrite = 0;
+		bool soundIsValid = false;
+		if (SUCCEEDED(secondaryBuffer->GetCurrentPosition(&playCursorPosition, &writeCursorPosition)))
+		{
+			bytesToLock = (soundOutput.runningSampleIndex * soundOutput.bytesPerSample) % soundOutput.secondaryBufferSize;
+			targetCursor = ((playCursorPosition + (soundOutput.latencySampleCount * soundOutput.bytesPerSample)) % soundOutput.secondaryBufferSize);
+			if (bytesToLock > targetCursor)
+			{
+				bytesToWrite = soundOutput.secondaryBufferSize - bytesToLock;
+				bytesToWrite += targetCursor;
+			}
+			else
+			{
+				bytesToWrite = targetCursor - bytesToLock;
+			}
+			soundIsValid = true;
+		}
+
+		Sound_Output_Buffer soundBuffer = {};
+		soundBuffer.samplesPerSecond = soundOutput.samplesPerSecond;
+		soundBuffer.sampleCount = bytesToWrite / soundOutput.bytesPerSample;
+		soundBuffer.samples = samples;
+
+		if (soundIsValid)
+		{
+			Win32FillSoundBuffer(&soundOutput, bytesToLock, bytesToWrite, &soundBuffer);
+		}
+
 		// Render some graphics
 		Win32_Window_Dimension dimension = Win32GetWindowDimension(hMainWnd);
 
@@ -647,34 +715,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		buffer.width = backbuffer.width;
 		buffer.height = backbuffer.height;
 		buffer.pitch = backbuffer.pitch;
-		GameUpdateAndRender(&buffer, xOffset, yOffset);
-
-		// Tetris
-		UpdateTetrisGame();
-		RenderTetrisGame(&buffer);
-		// end of Render and control Tetris Game
+		GameUpdateAndRender(&buffer, xOffset, yOffset, &soundBuffer, soundOutput.toneHz);
 
 		Win32DisplayBufferInWindow(&backbuffer, deviceContext, dimension.width, dimension.height);
-		
-		// Direct Sound testing
-		/*DWORD playCursorPosition;
-		DWORD writeCursorPosition;
-		if (SUCCEEDED(secondaryBuffer->GetCurrentPosition(&playCursorPosition, &writeCursorPosition)))
-		{
-			DWORD bytesToLock = (soundOutput.runningSampleIndex * soundOutput.bytesPerSample) % soundOutput.secondaryBufferSize;
-			DWORD bytesToWrite = 0;
-			if (bytesToLock > playCursorPosition)
-			{
-				bytesToWrite = soundOutput.secondaryBufferSize - bytesToLock;
-				bytesToWrite += playCursorPosition;
-			}
-			else
-			{
-				bytesToWrite = playCursorPosition - bytesToLock;
-			}
-
-			Win32FillSoundBuffer(&soundOutput, bytesToLock, bytesToWrite);
-		}*/
 	}
 
 	return 0;
