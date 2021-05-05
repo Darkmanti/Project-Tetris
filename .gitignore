@@ -6,6 +6,7 @@
 ![Rr]es/icon.ico
 ![Rr]es/readme.txt
 [Rr]es/*.wav
+[Rr]es/fonts
 
 # Misc
 misc/pathto_vcvarsall.txt
@@ -19,3 +20,6 @@ src/*.sln
 src/*.vcxproj
 src/*.filters
 src/*.user
+
+# Src
+src/*.bmp

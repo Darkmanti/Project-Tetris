@@ -162,7 +162,7 @@ namespace con
 					{
 						double value = va_arg(args, double);
 						wchar_t string[_CVTBUFSIZE];
-						VoidFloatToWCHAR(value, string);
+						VoidFloatToWCHAR((f32)value, string);
 						wcscat(result, string);
 					} break;
 					case 'm':

@@ -1,6 +1,6 @@
 #include "tetris.h"
 
-void GameOutputSound(Sound_Output_Buffer* soundBuffer, int toneHz)
+void GameOutputSound(Game_Sound_Output_Buffer* soundBuffer, int toneHz)
 {
 	static f32 tSine;
 	i16 toneVolume = 3000;
@@ -18,13 +18,13 @@ void GameOutputSound(Sound_Output_Buffer* soundBuffer, int toneHz)
 	}
 }
 
-void RenderWeirdGradient(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset)
+void RenderWeirdGradient(Game_Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset)
 {
 	u8* row = (u8*)buffer->memory;
-	for (int y = 0; y < buffer->height; ++y)
+	for (int y = 0; y < buffer->height; y++)
 	{
 		u32* pixel = (u32*)row;
-		for (int x = 0; x < buffer->width; ++x)
+		for (int x = 0; x < buffer->width; x++)
 		{
 			u8 red = 0;
 			u8 green = (y + yOffset);
@@ -38,15 +38,22 @@ void RenderWeirdGradient(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffs
 	}
 }
 
-void GameUpdateAndRender(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset, Sound_Output_Buffer* soundBuffer, int toneHz)
+void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer)
 {
 	// Learnings
+	static int xOffset = 0;
+	static int yOffset = 0;
+	static int toneHz = 256;
+
 	GameOutputSound(soundBuffer, toneHz);
 	RenderWeirdGradient(buffer, xOffset, yOffset);
 
 	// Tetris
 	UpdateTetrisGame();
 	RenderTetrisGame(buffer);
+
+	// Fonts
+	WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Сообщение", 10, 50);
 }
 
 // Tetris
@@ -296,30 +303,30 @@ bool GetMartixAroundCenter(m3* mat)
 		return false;
 	}
 
-	mat->_11 = gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1];
-	mat->_12 = gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1];
-	mat->_13 = gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1];
-	mat->_21 = gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 0];
-	mat->_22 = gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 0];
-	mat->_23 = gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 0];
-	mat->_31 = gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1];
-	mat->_32 = gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1];
-	mat->_33 = gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1];
+	mat->_11 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1];
+	mat->_12 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1];
+	mat->_13 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1];
+	mat->_21 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 0];
+	mat->_22 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 0];
+	mat->_23 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 0];
+	mat->_31 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1];
+	mat->_32 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1];
+	mat->_33 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1];
 
 	return true;
 }
 
 void SetMatrixValueAroundCenter(m3* mat)
 {
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1] = mat->_11;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1] = mat->_12;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1] = mat->_13;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 0] = mat->_21;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 0] = mat->_22;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 0] = mat->_23;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1] = mat->_31;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1] = mat->_32;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1] = mat->_33;
+	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1] = (i32)mat->_11;
+	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1] = (i32)mat->_12;
+	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1] = (i32)mat->_13;
+	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 0] = (i32)mat->_21;
+	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 0] = (i32)mat->_22;
+	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 0] = (i32)mat->_23;
+	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1] = (i32)mat->_31;
+	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1] = (i32)mat->_32;
+	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1] = (i32)mat->_33;
 }
 
 bool rotateLeft(m3* mat)
@@ -376,44 +383,44 @@ bool GetMartixAroundCenter(m4* mat)
 		return false;
 	}
 
-	mat->_11 = gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 2];
-	mat->_12 = gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 2];
-	mat->_13 = gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 2];
-	mat->_14 = gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 2];
-	mat->_21 = gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 1];
-	mat->_22 = gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1];
-	mat->_23 = gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1];
-	mat->_24 = gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1];
-	mat->_31 = gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 0];
-	mat->_32 = gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 0];
-	mat->_33 = gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 0];
-	mat->_34 = gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 0];
-	mat->_41 = gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y - 1];
-	mat->_42 = gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1];
-	mat->_43 = gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1];
-	mat->_44 = gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1];
+	mat->_11 = (f32)gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 2];
+	mat->_12 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 2];
+	mat->_13 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 2];
+	mat->_14 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 2];
+	mat->_21 = (f32)gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 1];
+	mat->_22 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1];
+	mat->_23 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1];
+	mat->_24 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1];
+	mat->_31 = (f32)gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 0];
+	mat->_32 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 0];
+	mat->_33 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 0];
+	mat->_34 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 0];
+	mat->_41 = (f32)gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y - 1];
+	mat->_42 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1];
+	mat->_43 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1];
+	mat->_44 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1];
 
 	return true;
 }
 
 void SetMatrixValueAroundCenter(m4* mat)
 {
-	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 2] = mat->_11;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 2] = mat->_12;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 2] = mat->_13;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 2] = mat->_14;
-	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 1] = mat->_21;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1] = mat->_22;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1] = mat->_23;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1] = mat->_24;
-	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 0] = mat->_31;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 0] = mat->_32;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 0] = mat->_33;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 0] = mat->_34;
-	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y - 1] = mat->_41;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1] = mat->_42;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1] = mat->_43;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1] = mat->_44;
+	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 2] = (i32)mat->_11;
+	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 2] = (i32)mat->_12;
+	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 2] = (i32)mat->_13;
+	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 2] = (i32)mat->_14;
+	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 1] = (i32)mat->_21;
+	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1] = (i32)mat->_22;
+	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1] = (i32)mat->_23;
+	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1] = (i32)mat->_24;
+	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 0] = (i32)mat->_31;
+	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 0] = (i32)mat->_32;
+	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 0] = (i32)mat->_33;
+	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 0] = (i32)mat->_34;
+	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y - 1] = (i32)mat->_41;
+	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1] = (i32)mat->_42;
+	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1] = (i32)mat->_43;
+	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1] = (i32)mat->_44;
 }
 
 bool rotateLeft(m4* mat)
@@ -690,7 +697,7 @@ void UpdateTetrisGame()
 		}
 }
 
-void DrawingFillRectangle(Bitmap_Offscreen_Buffer* buffer, int x_pos, int y_pos, int width, int height, int type)
+void DrawingFillRectangle(Game_Bitmap_Offscreen_Buffer* buffer, int x_pos, int y_pos, int width, int height, int type)
 {
 	if (type == 0)
 	{
@@ -734,9 +741,9 @@ void DrawingFillRectangle(Bitmap_Offscreen_Buffer* buffer, int x_pos, int y_pos,
 	}
 }
 
-void RenderTetrisGame(Bitmap_Offscreen_Buffer* buffer)
+void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer)
 {
-	int posx = buffer->width / 2.5f;
+	int posx = (i32)(buffer->width / 2.5f);
 	int posy = 20;
 	f32 widthCoef = (f32)buffer->width / 800;
 	f32 heightCoef = (f32)buffer->height / 450;
@@ -744,7 +751,7 @@ void RenderTetrisGame(Bitmap_Offscreen_Buffer* buffer)
 
 	int border = 2;
 	// drawing glass
-	DrawingFillRectangle(buffer, posx, posy, gameFieldWidth * scaleCoef * widthCoef, gameFieldHeight * scaleCoef * heightCoef, 1);
+	DrawingFillRectangle(buffer, posx, posy, (i32)(gameFieldWidth * scaleCoef * widthCoef), (i32)(gameFieldHeight * scaleCoef * heightCoef), 1);
 
 	for (int i = 0; i < gameFieldWidth; i++)
 	{
@@ -752,7 +759,7 @@ void RenderTetrisGame(Bitmap_Offscreen_Buffer* buffer)
 		{
 			if (gameField[i][j] > 0)
 			{
-				DrawingFillRectangle(buffer, i * scaleCoef * widthCoef + posx, j * scaleCoef * heightCoef + posy, scaleCoef * widthCoef - border, scaleCoef * heightCoef - border, 0);
+				DrawingFillRectangle(buffer, (i32)(i * scaleCoef * widthCoef + posx), (i32)(j * scaleCoef * heightCoef) + posy, (i32)(scaleCoef * widthCoef) - border, (i32)(scaleCoef * heightCoef) - border, 0);
 			}
 		}
 	}

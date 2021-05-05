@@ -1,3 +1,9 @@
+// defines for additional libraries
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#define STB_TRUETYPE_IMPLEMENTATION
+
 // define some useful macros
 #define	internal static
 
@@ -22,3 +28,6 @@
 // TODO: make it detachable
 // debug console for debugging
 #include "debug_console.cpp"
+
+// font processing
+#include "font_proccesing.cpp"

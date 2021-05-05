@@ -14,14 +14,14 @@
 
 // TODO: In the future, rendering _specifically_ will become a three-tiered abstraction!!!
 
-struct Sound_Output_Buffer
+struct Game_Sound_Output_Buffer
 {
     int samplesPerSecond;
     int sampleCount;
     i16* samples;
 };
 
-struct Bitmap_Offscreen_Buffer
+struct Game_Bitmap_Offscreen_Buffer
 {
     // pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
     void* memory;
@@ -30,10 +30,18 @@ struct Bitmap_Offscreen_Buffer
     int pitch;
 };
 
-struct _Point
+// TODO: Escaping problem
+#include "font_proccesing.h"
+
+struct Game_Point
 {
     int x;
     int y;
+};
+
+struct Game_Input
+{
+
 };
 
 bool keyState[256] = {};
@@ -58,9 +66,11 @@ i64 controlOnePressDelay = 450;
 i64 controlDelay = 60;
 
 int currentFigure = -1;
-_Point centerCurrentFigure = { -1 };
+Game_Point centerCurrentFigure = { -1 };
 
-void GameUpdateAndRender(Bitmap_Offscreen_Buffer* buffer, int xOffset, int yOffset, Sound_Output_Buffer* soundBuffer, int toneHz);
+Font font = {};
 
-void RenderTetrisGame(Bitmap_Offscreen_Buffer* buffer);
+void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer);
+
+void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer);
 void UpdateTetrisGame();

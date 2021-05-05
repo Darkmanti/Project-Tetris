@@ -21,6 +21,8 @@ const f32 PI_32 = 3.14159265358979323846f;
 const f64 PI_64 = 3.14159265358979323846;
 
 
+// TODO: do int and uint vector and matrix
+
 // FUN to TETRIS
 
 

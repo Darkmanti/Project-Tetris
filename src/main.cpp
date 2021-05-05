@@ -24,6 +24,7 @@
 #include "math.h"
 #include "debug_console.h"
 #include "sound_file_loader.h"
+#include "font_proccesing.h"
 
 #include <Windows.h>
 #include <Xinput.h>
@@ -57,10 +58,7 @@ struct Win32_Window_Dimension
 struct Win32_Sound_Output
 {
 	int samplesPerSecond;
-	int toneHz;
-	i16 toneVolume;
 	u32 runningSampleIndex;
-	int wavePeriod;
 	int bytesPerSample;
 	int secondaryBufferSize;
 	f32 tSine;
@@ -75,7 +73,7 @@ struct Win32_XAudio2_Settings
 
 // some global variable
 HWND hMainWnd = {};
-// Should move this variable to main loop
+// TODO: Should move this variable to main loop
 MSG msg = {};
 Win32_Bitmap_Offscreen_Buffer backbuffer = {};
 
@@ -261,7 +259,7 @@ void Win32ClearBuffer(Win32_Sound_Output* soundOutput)
 	}
 }
 
-void Win32FillSoundBuffer(Win32_Sound_Output* soundOutput, DWORD bytesToLock, DWORD bytesToWrite, Sound_Output_Buffer* sourceBuffer)
+void Win32FillSoundBuffer(Win32_Sound_Output* soundOutput, DWORD bytesToLock, DWORD bytesToWrite, Game_Sound_Output_Buffer* sourceBuffer)
 {
 	void* region1;
 	DWORD region1Size;
@@ -557,12 +555,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	// Set Tetris generation seed
 	// TODO: Move this from here
-	srand(GetTimeStampMilliSecond());
+	srand((u32)GetTimeStampMilliSecond());
 
 	HDC deviceContext = GetDC(hMainWnd);
-
-	int xOffset = 0;
-	int yOffset = 0;
 
 	// XAudio2
 	Win32_XAudio2_Settings xAudio2Output = {};
@@ -581,9 +576,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	Win32_Sound_Output soundOutput = {};
 
 	soundOutput.samplesPerSecond = 48000;
-	soundOutput.toneHz = 256;
-	soundOutput.toneVolume = 3000;
-	soundOutput.wavePeriod = soundOutput.samplesPerSecond / soundOutput.toneHz;
 	soundOutput.bytesPerSample = sizeof(i16) * 2;
 	soundOutput.secondaryBufferSize = soundOutput.samplesPerSecond * soundOutput.bytesPerSample;
 	soundOutput.latencySampleCount = soundOutput.samplesPerSecond / 15;
@@ -594,9 +586,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	i16* samples = (i16*)VirtualAlloc(NULL, soundOutput.secondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
+	// Fonts
+	// TODO: this!!!
+	InitFont(&font, 110, 1200, L"..//res//fonts//OpenSans-Semibold.ttf", 32, 2048, 2048);
+
 	// run the game
 	while (true)
 	{
+		Game_Input input = {};
+
 		// maybe place MSG in while loop before PeekMessage()
 		if (PeekMessageW(&msg, 0, 0, 0, PM_REMOVE))
 		{
@@ -618,7 +616,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 			if (XInputGetState(controllerIndex, &controllerState) == ERROR_SUCCESS)
 			{
 				// This Controller is connected
-				//con::Outf(L"%ul contorller is connected\n", controllerIndex);
 				XINPUT_GAMEPAD* pad = &controllerState.Gamepad;
 				bool DPAD_UP =			(pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
 				bool DPAD_DOWN =		(pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
@@ -642,22 +639,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 				SHORT sThumbRX = pad->sThumbRX;
 				SHORT sThumbRY = pad->sThumbRY;
 
-				if (sThumbLX > XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE || sThumbLX < -XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)
-				{
-					float relativeValue = (float)(sThumbLX - (-32'768)) / (float)65'535;
-					int scaledValue = relativeValue * 30 - 15;
-					xOffset += scaledValue;
-				}
-				if (sThumbLY > XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE || sThumbLY < -XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE)
-				{
-					float relativeValue = (float)(sThumbLY - (-32'768)) / (float)65'535;
-					int scaledValue = relativeValue * 30 - 15;
-					yOffset -= scaledValue;
-				}
-
-				// direct sound sine wave
-				soundOutput.toneHz = 512 + (int)(256.0f * ((f32)sThumbLY / 30000.0f));
-				soundOutput.wavePeriod = soundOutput.samplesPerSecond / soundOutput.toneHz;
+				// TODO: fill the input structure
 
 				/*
 				XINPUT_VIBRATION vibration;
@@ -670,7 +652,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 			else
 			{
 				// This Controller is not connected
-				//con::Outf(L"%ul contorller is not connected\n", controllerIndex);
 			}
 		}
 
@@ -697,7 +678,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 			soundIsValid = true;
 		}
 
-		Sound_Output_Buffer soundBuffer = {};
+		Game_Sound_Output_Buffer soundBuffer = {};
 		soundBuffer.samplesPerSecond = soundOutput.samplesPerSecond;
 		soundBuffer.sampleCount = bytesToWrite / soundOutput.bytesPerSample;
 		soundBuffer.samples = samples;
@@ -710,12 +691,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		// Render some graphics
 		Win32_Window_Dimension dimension = Win32GetWindowDimension(hMainWnd);
 
-		Bitmap_Offscreen_Buffer buffer = {};
+		Game_Bitmap_Offscreen_Buffer buffer = {};
 		buffer.memory = backbuffer.memory;
 		buffer.width = backbuffer.width;
 		buffer.height = backbuffer.height;
 		buffer.pitch = backbuffer.pitch;
-		GameUpdateAndRender(&buffer, xOffset, yOffset, &soundBuffer, soundOutput.toneHz);
+		GameUpdateAndRender(&input, &buffer, &soundBuffer);
 
 		Win32DisplayBufferInWindow(&backbuffer, deviceContext, dimension.width, dimension.height);
 	}
