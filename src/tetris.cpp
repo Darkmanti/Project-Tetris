@@ -45,15 +45,30 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 	static int yOffset = 0;
 	static int toneHz = 256;
 
-	GameOutputSound(soundBuffer, toneHz);
+	//GameOutputSound(soundBuffer, toneHz);
 	RenderWeirdGradient(buffer, xOffset, yOffset);
 
 	// Tetris
-	UpdateTetrisGame();
-	RenderTetrisGame(buffer);
+	if (gameState == 1) // Single
+	{
+		UpdateTetrisGame();
+		RenderTetrisGame(buffer);
 
-	// Fonts
-	WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Сообщение", 10, 50);
+		// Fonts
+		WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Сообщение", 10, 50);
+	}
+	else if (gameState == 2) // Join multiplayer
+	{
+		ProccesIPInput(&ipStructure);
+		if (ipStructure.ipLength > 0)
+		{
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, ipStructure.ipString, 10, 50);
+		}
+	}
+	else if (gameState == 3) // Host multiplayer
+	{
+
+	}
 }
 
 // Tetris
@@ -763,4 +778,95 @@ void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer)
 			}
 		}
 	}
+}
+
+void ProccessDigitInput(int key, IPStrucrute* ip)
+{
+	if (ip->ipLength < 31)
+	{
+		if (ip->ipLength == 3 || ip->ipLength == 7 || ip->ipLength == 11)
+		{
+			ip->ipString[ip->ipLength++] = L'.';
+		}
+		ip->ipString[ip->ipLength++] = key;
+	}
+}
+
+void ProccesIPInput(IPStrucrute* ip)
+{
+	if (KeyPressed(0x30))
+	{
+		ProccessDigitInput(0x30, ip);
+	}
+	if (KeyPressed(0x31))
+	{
+		ProccessDigitInput(0x31, ip);
+	}
+	if (KeyPressed(0x32))
+	{
+		ProccessDigitInput(0x32, ip);
+	}
+	if (KeyPressed(0x33))
+	{
+		ProccessDigitInput(0x33, ip);
+	}
+	if (KeyPressed(0x34))
+	{
+		ProccessDigitInput(0x34, ip);
+	}
+	if (KeyPressed(0x35))
+	{
+		ProccessDigitInput(0x35, ip);
+	}
+	if (KeyPressed(0x36))
+	{
+		ProccessDigitInput(0x36, ip);
+	}
+	if (KeyPressed(0x37))
+	{
+		ProccessDigitInput(0x37, ip);
+	}
+	if (KeyPressed(0x38))
+	{
+		ProccessDigitInput(0x38, ip);
+	}
+	if (KeyPressed(0x39))
+	{
+		ProccessDigitInput(0x39, ip);
+	}
+	if (KeyPressed(VK_OEM_1))
+	{
+		ProccessDigitInput(58, ip);
+	}
+	if (KeyPressed(VK_BACK))
+	{
+		if (ip->ipLength > 0)
+		{
+			if (ip->ipLength == 5 || ip->ipLength == 9 || ip->ipLength == 13)
+			{
+				ip->ipString[ip->ipLength-- - 1] = 0;
+			}
+			ip->ipString[ip->ipLength-- - 1] = 0;
+		}
+	}
+
+	if (KeyPressed(VK_RETURN))
+	{
+		// Join
+		con::Outf(L"Ты вошёл поздравляю\n");
+	}
+
+	KeyReleased(0x30);
+	KeyReleased(0x31);
+	KeyReleased(0x32);
+	KeyReleased(0x33);
+	KeyReleased(0x34);
+	KeyReleased(0x35);
+	KeyReleased(0x36);
+	KeyReleased(0x37);
+	KeyReleased(0x38);
+	KeyReleased(0x39);
+	KeyReleased(VK_OEM_1);
+	KeyReleased(VK_BACK);
+	KeyReleased(VK_RETURN);
 }

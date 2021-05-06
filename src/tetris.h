@@ -70,6 +70,20 @@ Game_Point centerCurrentFigure = { -1 };
 
 Font font = {};
 
+// TODO: Just testing
+struct IPStrucrute
+{
+    wchar_t ipString[32];
+    int ipLength;
+};
+
+IPStrucrute ipStructure = {};
+
+void ProccesIPInput(IPStrucrute* ip);
+
+// TODO: GameState
+int gameState = 1;
+
 void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer);
 
 void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer);

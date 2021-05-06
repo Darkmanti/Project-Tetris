@@ -392,6 +392,34 @@ void Win32DisplayBufferInWindow(Win32_Bitmap_Offscreen_Buffer* buffer, HDC devic
 				  SRCCOPY);
 }
 
+int SetStateWithDialogBox()
+{
+	int msgboxID = MessageBox(
+		NULL,
+		L"Single? Join? Host?",
+		L"Choose game state",
+		MB_ICONQUESTION | MB_CANCELTRYCONTINUE | MB_DEFBUTTON1
+	);
+
+	switch (msgboxID)
+	{
+		case IDCANCEL:
+		{
+			msgboxID = 1;
+		} break;
+		case IDTRYAGAIN:
+		{
+			msgboxID = 2;
+		} break;
+		case IDCONTINUE:
+		{
+			msgboxID = 3;
+		} break;
+	}
+
+	return msgboxID;
+}
+
 
 void Win32ProcessCmdLineArguments(int numArgs, LPWSTR* commandLineArray)
 {
@@ -585,6 +613,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	secondaryBuffer->Play(NULL, NULL, DSBPLAY_LOOPING);
 
 	i16* samples = (i16*)VirtualAlloc(NULL, soundOutput.secondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+	// TODO: GameState
+	gameState = SetStateWithDialogBox();
 
 	// Fonts
 	// TODO: this!!!

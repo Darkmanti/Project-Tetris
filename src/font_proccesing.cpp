@@ -26,7 +26,7 @@ void InitFont(Font* font, f32 heightFont, i32 glyphs, const wchar_t* fileName, i
 	font->glyphs = glyphs;
 
 	// write bitmap on disk
-	stbi_write_bmp("bitmap.bmp", width, height, 1, font->bakedFontBitmap);
+	//stbi_write_bmp("bitmap.bmp", width, height, 1, font->bakedFontBitmap);
 
 	free(data);
 }

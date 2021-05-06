@@ -1,3 +1,6 @@
+// defines for compiler
+#define _CRT_SECURE_NO_WARNINGS
+
 // defines for additional libraries
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
