@@ -20,13 +20,22 @@
 	
 */
 
+// Multiplayer
+// Must include before any WinAPI header
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+// User files
 #include "tetris.h"
 #include "math.h"
 #include "debug_console.h"
 #include "sound_file_loader.h"
 #include "font_proccesing.h"
 
+// WinAPI
 #include <Windows.h>
+
+// Gamepad Input
 #include <Xinput.h>
 
 // sound engine three variants
@@ -420,6 +429,29 @@ int SetStateWithDialogBox()
 	return msgboxID;
 }
 
+void InitWSAAndCreateSocket(WSADATA* wsaData)
+{
+	int iResult;
+
+	iResult = WSAStartup(MAKEWORD(2, 2), wsaData);
+	if (iResult != 0)
+	{
+		con::Outf(L"WSAStartup failed: %d\n", iResult);
+	}
+
+	if (LOBYTE(wsaData->wVersion) != 2 || HIBYTE(wsaData->wVersion) != 2)
+	{
+		/* Tell the user that we could not find a usable */
+		/* WinSock DLL.                                  */
+		con::Outf(L"Could not find a usable version of Winsock.dll\n");
+		WSACleanup();
+	}
+	else
+	{
+		con::Outf(L"The Winsock 2.2 dll was found okay\n");
+	}
+}
+
 
 void Win32ProcessCmdLineArguments(int numArgs, LPWSTR* commandLineArray)
 {
@@ -615,11 +647,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	i16* samples = (i16*)VirtualAlloc(NULL, soundOutput.secondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
 	// TODO: GameState
-	gameState = SetStateWithDialogBox();
+	multiplayerState = SetStateWithDialogBox();
 
 	// Fonts
 	// TODO: this!!!
 	InitFont(&font, 110, 1200, L"..//res//fonts//OpenSans-Semibold.ttf", 32, 2048, 2048);
+
+	connect(NULL, NULL, NULL);
 
 	// run the game
 	while (true)

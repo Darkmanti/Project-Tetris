@@ -46,15 +46,6 @@ struct Game_Input
 
 bool keyState[256] = {};
 
-const int gameFieldWidth = 10;
-const int gameFieldHeight = 20;
-int gameField[gameFieldWidth][gameFieldHeight]{};
-
-i64 lastFrame = 0;
-i64 currentFrame = 0;
-i64 timeElapsed = 0;
-i64 speedMillisecond = 400;
-
 i64 controlDownOnePressElapsed = 0;
 i64 controlDownElapsed = 0;
 i64 controlLeftOnePressElapsed = 0;
@@ -65,10 +56,9 @@ i64 controlRightElapsed = 0;
 i64 controlOnePressDelay = 450;
 i64 controlDelay = 60;
 
-int currentFigure = -1;
-Game_Point centerCurrentFigure = { -1 };
-
 Font font = {};
+
+bool gameInit = false;
 
 // TODO: Just testing
 struct IPStrucrute
@@ -82,9 +72,39 @@ IPStrucrute ipStructure = {};
 void ProccesIPInput(IPStrucrute* ip);
 
 // TODO: GameState
-int gameState = 1;
+int multiplayerState = 1;
+
+struct GameField
+{
+    int width;
+    int height;
+    int** data;
+};
+
+struct TetrisHostGameState
+{
+    GameField field;
+
+    i64 lastFrame;
+    i64 currentFrame;
+    i64 timeElapsed;
+    i64 speedMillisecond;
+
+    int currentFigure;
+    Game_Point centerCurrentFigure;
+};
+
+struct TetrisClientGameState
+{
+    GameField field;
+};
+
+TetrisHostGameState hostGameState = {};
+TetrisClientGameState clientGameState = {};
 
 void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer);
 
-void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer);
-void UpdateTetrisGame();
+void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, GameField* field);
+void UpdateTetrisGame(TetrisHostGameState* gameState);
+
+void InitTetrisGame(TetrisHostGameState* gameState);

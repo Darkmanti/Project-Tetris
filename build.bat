@@ -7,7 +7,7 @@ set MainDir="%cd%"
 set GameName=Tetris
 set GameNameExe=unity_build.exe
 
-set AddLib=User32.lib Shell32.lib Gdi32.lib Ole32.lib
+set AddLib=User32.lib Shell32.lib Gdi32.lib Ole32.lib Ws2_32.lib
 set AddDll=
 
 rem /D and without spaces write a definitions

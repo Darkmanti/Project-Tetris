@@ -49,51 +49,74 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 	RenderWeirdGradient(buffer, xOffset, yOffset);
 
 	// Tetris
-	if (gameState == 1) // Single
+	if (!gameInit)
 	{
-		UpdateTetrisGame();
-		RenderTetrisGame(buffer);
+		InitTetrisGame(&hostGameState);
+		gameInit = true;
+	}
+
+	if (multiplayerState == 1) // Single
+	{
+		UpdateTetrisGame(&hostGameState);
+		RenderTetrisGame(buffer, (int)(buffer->width / 2.5f), &hostGameState.field);
 
 		// Fonts
 		WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Сообщение", 10, 50);
 	}
-	else if (gameState == 2) // Join multiplayer
+	else if (multiplayerState == 2) // Join multiplayer
 	{
 		ProccesIPInput(&ipStructure);
 		if (ipStructure.ipLength > 0)
 		{
 			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, ipStructure.ipString, 10, 50);
 		}
-	}
-	else if (gameState == 3) // Host multiplayer
-	{
 
+		/*
+		1.	Initialize Winsock.
+		2.	Create a socket.
+		3.	Connect to the server.
+		4.	Send and receive data.
+		5.	Disconnect.
+		*/
+	}
+	else if (multiplayerState == 3) // Host multiplayer
+	{
+		/*
+		1.	Initialize Winsock.
+		2.	Create a socket.
+		3.	Bind the socket.
+		4.	Listen on the socket for a client.
+		5.	Accept a connection from a client.
+		6.	Receive and send data.
+		7.	Disconnect.
+		*/
 	}
 }
 
 // Tetris
 
-void ResetField()
+void ResetField(GameField* field)
 {
-	for (int i = 0; i < gameFieldWidth; i++)
+	for (int i = 0; i < field->width; i++)
 	{
-		for (int j = 0; j < gameFieldHeight; j++)
+		for (int j = 0; j < field->height; j++)
 		{
-			gameField[i][j] = 0;
+			field->data[i][j] = 0;
 		}
 	}
 }
 
-void CheckOnBurningLine()
+void CheckOnBurningLine(GameField* field)
 {
-	bool list[gameFieldHeight] = { false };
+	// TODO: variable height
+	bool list[20] = { false };
 	int lineCounter = 0;
-	for (int j = 0; j < gameFieldHeight; j++)
+	for (int j = 0; j < field->height; j++)
 	{
 		int count = 0;
-		for (int i = 0; i < gameFieldWidth; i++)
+		for (int i = 0; i < field->width; i++)
 		{
-			if (gameField[i][j] == 1)
+			if (field->data[i][j] == 1)
 			{
 				count++;
 			}
@@ -108,21 +131,21 @@ void CheckOnBurningLine()
 	if (lineCounter > 0)
 	{
 		// TODO: SUPER WAU EFFECT!!!!
-		for (int j = gameFieldHeight - 1; j >= 0; j--)
+		for (int j = field->height - 1; j >= 0; j--)
 		{
 			if (list[j])
 			{
-				for (int i = 0; i < gameFieldWidth; i++)
+				for (int i = 0; i < field->width; i++)
 				{
-					gameField[i][j] = 0;
+					field->data[i][j] = 0;
 				}
 
-				for (int h = j; h < gameFieldHeight - 1; h++)
+				for (int h = j; h < field->height - 1; h++)
 				{
-					for (int i = 0; i < gameFieldWidth; i++)
+					for (int i = 0; i < field->width; i++)
 					{
-						gameField[i][h] = gameField[i][h + 1];
-						gameField[i][h + 1] = 0;
+						field->data[i][h] = field->data[i][h + 1];
+						field->data[i][h + 1] = 0;
 					}
 				}
 			}
@@ -130,91 +153,94 @@ void CheckOnBurningLine()
 	}
 }
 
-void SpawnFigure()
+void SpawnFigure(TetrisHostGameState* state)
 {
-	currentFigure = rand() % 7;
+	Game_Point* centerCurrentFigure = &state->centerCurrentFigure;
+	GameField* field = &state->field;
 
-	switch (currentFigure)
+	state->currentFigure = rand() % 7;
+
+	switch (state->currentFigure)
 	{
 		// palka
-	case 0:
-	{
-		gameField[3][19] = 2;
-		gameField[4][19] = 2;
-		gameField[5][19] = 2;
-		gameField[6][19] = 2;
-		centerCurrentFigure.x = 5;
-		centerCurrentFigure.y = 19;
-	} break;
-	// cubik
-	case 1:
-	{
-		gameField[4][19] = 2;
-		gameField[4][18] = 2;
-		gameField[5][19] = 2;
-		gameField[5][18] = 2;
-	} break;
-	// z - obrazn
-	case 2:
-	{
-		gameField[4][19] = 2;
-		gameField[5][19] = 2;
-		gameField[5][18] = 2;
-		gameField[6][18] = 2;
-		centerCurrentFigure.x = 5;
-		centerCurrentFigure.y = 19;
-	} break;
-	// z - obrazn flip horizontal
-	case 3:
-	{
-		gameField[4][18] = 2;
-		gameField[5][18] = 2;
-		gameField[5][19] = 2;
-		gameField[6][19] = 2;
-		centerCurrentFigure.x = 5;
-		centerCurrentFigure.y = 19;
-	} break;
-	// bukva G
-	case 4:
-	{
-		gameField[4][18] = 2;
-		gameField[4][19] = 2;
-		gameField[5][19] = 2;
-		gameField[6][19] = 2;
-		centerCurrentFigure.x = 5;
-		centerCurrentFigure.y = 18;
-	} break;
-	// bukva G flip horizontal
-	case 5:
-	{
-		gameField[6][18] = 2;
-		gameField[4][19] = 2;
-		gameField[5][19] = 2;
-		gameField[6][19] = 2;
-		centerCurrentFigure.x = 5;
-		centerCurrentFigure.y = 18;
-	} break;
-	// T obrazn
-	case 6:
-	{
-		gameField[4][19] = 2;
-		gameField[5][19] = 2;
-		gameField[6][19] = 2;
-		gameField[5][18] = 2;
-		centerCurrentFigure.x = 5;
-		centerCurrentFigure.y = 19;
-	} break;
-	invalid_default
+		case 0:
+		{
+			field->data[3][19] = 2;
+			field->data[4][19] = 2;
+			field->data[5][19] = 2;
+			field->data[6][19] = 2;
+			centerCurrentFigure->x = 5;
+			centerCurrentFigure->y = 19;
+		} break;
+		// cubik
+		case 1:
+		{
+			field->data[4][19] = 2;
+			field->data[4][18] = 2;
+			field->data[5][19] = 2;
+			field->data[5][18] = 2;
+		} break;
+		// z - obrazn
+		case 2:
+		{
+			field->data[4][19] = 2;
+			field->data[5][19] = 2;
+			field->data[5][18] = 2;
+			field->data[6][18] = 2;
+			centerCurrentFigure->x = 5;
+			centerCurrentFigure->y = 19;
+		} break;
+		// z - obrazn flip horizontal
+		case 3:
+		{
+			field->data[4][18] = 2;
+			field->data[5][18] = 2;
+			field->data[5][19] = 2;
+			field->data[6][19] = 2;
+			centerCurrentFigure->x = 5;
+			centerCurrentFigure->y = 19;
+		} break;
+		// bukva G
+		case 4:
+		{
+			field->data[4][18] = 2;
+			field->data[4][19] = 2;
+			field->data[5][19] = 2;
+			field->data[6][19] = 2;
+			centerCurrentFigure->x = 5;
+			centerCurrentFigure->y = 18;
+		} break;
+		// bukva G flip horizontal
+		case 5:
+		{
+			field->data[6][18] = 2;
+			field->data[4][19] = 2;
+			field->data[5][19] = 2;
+			field->data[6][19] = 2;
+			centerCurrentFigure->x = 5;
+			centerCurrentFigure->y = 18;
+		} break;
+		// T obrazn
+		case 6:
+		{
+			field->data[4][19] = 2;
+			field->data[5][19] = 2;
+			field->data[6][19] = 2;
+			field->data[5][18] = 2;
+			centerCurrentFigure->x = 5;
+			centerCurrentFigure->y = 19;
+		} break;
+		invalid_default
 	}
 }
 
-int CheckForPlayerFigure()
+int CheckForPlayerFigure(GameField* field)
 {
-	for (int j = 0; j < gameFieldHeight; j++)
+	for (int j = 0; j < field->height; j++)
 	{
-		for (int i = 0; i < gameFieldWidth; i++)
+		for (int i = 0; i < field->width; i++)
 		{
-			if (gameField[i][j] == 2)
+			if (field->data[i][j] == 2)
 			{
 				return j;
 			}
@@ -223,7 +249,7 @@ int CheckForPlayerFigure()
 	return -1;
 }
 
-int WhatToDoWithPlayerFigure(int lowerY)
+int WhatToDoWithPlayerFigure(int lowerY, GameField* field)
 {
 	if (lowerY == 0)
 	{
@@ -231,11 +257,11 @@ int WhatToDoWithPlayerFigure(int lowerY)
 	}
 	else
 	{
-		for (int i = 0; i < gameFieldWidth; i++)
+		for (int i = 0; i < field->width; i++)
 		{
-			for (int j = 1; j < gameFieldHeight; j++)
+			for (int j = 1; j < field->height; j++)
 			{
-				if ((gameField[i][j] == 2) && (gameField[i][j - 1] == 1))
+				if ((field->data[i][j] == 2) && (field->data[i][j - 1] == 1))
 				{
 					return 1;
 				}
@@ -247,51 +273,51 @@ int WhatToDoWithPlayerFigure(int lowerY)
 }
 
 // just check higher line
-bool CheckForGameEnd()
+bool CheckForGameEnd(GameField* field)
 {
-	for (int i = 0; i < gameFieldWidth; i++)
+	for (int i = 0; i < field->width; i++)
 	{
-		if (gameField[i][gameFieldHeight - 1] == 1)
+		if (field->data[i][field->height - 1] == 1)
 			return true;
 	}
 	return false;
 }
 
-void UpdateGameTick()
+void UpdateGameTick(Game_Point* centerCurrentFigure, GameField* field)
 {
 	// 0 - reserv
 	// 1 - change to 1
 	// 2 - lower the figure
 	int whatToDo = 0;
 
-	int lowerY = CheckForPlayerFigure();
+	int lowerY = CheckForPlayerFigure(field);
 
-	whatToDo = WhatToDoWithPlayerFigure(lowerY);
+	whatToDo = WhatToDoWithPlayerFigure(lowerY, field);
 
 	if (whatToDo == 2)
 	{
-		for (int i = 0; i < gameFieldWidth; i++)
+		for (int i = 0; i < field->width; i++)
 		{
-			for (int j = 1; j < gameFieldHeight; j++)
+			for (int j = 1; j < field->height; j++)
 			{
-				if (gameField[i][j] == 2)
+				if (field->data[i][j] == 2)
 				{
-					gameField[i][j - 1] = 2;
-					gameField[i][j] = 0;
+					field->data[i][j - 1] = 2;
+					field->data[i][j] = 0;
 				}
 			}
 		}
-		centerCurrentFigure.y--;
+		centerCurrentFigure->y--;
 	}
 	else if (whatToDo == 1)
 	{
-		for (int i = 0; i < gameFieldWidth; i++)
+		for (int i = 0; i < field->width; i++)
 		{
-			for (int j = 0; j < gameFieldHeight; j++)
+			for (int j = 0; j < field->height; j++)
 			{
-				if (gameField[i][j] == 2)
+				if (field->data[i][j] == 2)
 				{
-					gameField[i][j] = 1;
+					field->data[i][j] = 1;
 				}
 			}
 		}
@@ -301,47 +327,47 @@ void UpdateGameTick()
 		ASSERT(whatToDo);
 	}
 
-	CheckOnBurningLine();
+	CheckOnBurningLine(field);
 
-	if (CheckForGameEnd())
+	if (CheckForGameEnd(field))
 	{
-		ResetField();
+		ResetField(field);
 	}
 
 }
 
-bool GetMartixAroundCenter(m3* mat)
+bool GetMartixAroundCenter(m3* mat, Game_Point* centerCurrentFigure, GameField* field)
 {
-	if (((centerCurrentFigure.x - 1) < 0) || (centerCurrentFigure.x + 1 > (gameFieldWidth - 1))
-		|| ((centerCurrentFigure.y - 1) < 0) || ((centerCurrentFigure.y + 1) > (gameFieldHeight - 1)))
+	if (((centerCurrentFigure->x - 1) < 0) || (centerCurrentFigure->x + 1 > (field->width - 1))
+		|| ((centerCurrentFigure->y - 1) < 0) || ((centerCurrentFigure->y + 1) > (field->height - 1)))
 	{
 		return false;
 	}
 
-	mat->_11 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1];
-	mat->_12 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1];
-	mat->_13 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1];
-	mat->_21 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 0];
-	mat->_22 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 0];
-	mat->_23 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 0];
-	mat->_31 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1];
-	mat->_32 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1];
-	mat->_33 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1];
+	mat->_11 = (f32)field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 1];
+	mat->_12 = (f32)field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y + 1];
+	mat->_13 = (f32)field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y + 1];
+	mat->_21 = (f32)field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y - 0];
+	mat->_22 = (f32)field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y - 0];
+	mat->_23 = (f32)field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y - 0];
+	mat->_31 = (f32)field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y - 1];
+	mat->_32 = (f32)field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y - 1];
+	mat->_33 = (f32)field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y - 1];
 
 	return true;
 }
 
-void SetMatrixValueAroundCenter(m3* mat)
+void SetMatrixValueAroundCenter(m3* mat, Game_Point* centerCurrentFigure, GameField* field)
 {
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1] = (i32)mat->_11;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1] = (i32)mat->_12;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1] = (i32)mat->_13;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 0] = (i32)mat->_21;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 0] = (i32)mat->_22;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 0] = (i32)mat->_23;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1] = (i32)mat->_31;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1] = (i32)mat->_32;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1] = (i32)mat->_33;
+	field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 1] = (i32)mat->_11;
+	field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y + 1] = (i32)mat->_12;
+	field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y + 1] = (i32)mat->_13;
+	field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y - 0] = (i32)mat->_21;
+	field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y - 0] = (i32)mat->_22;
+	field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y - 0] = (i32)mat->_23;
+	field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y - 1] = (i32)mat->_31;
+	field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y - 1] = (i32)mat->_32;
+	field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y - 1] = (i32)mat->_33;
 }
 
 bool rotateLeft(m3* mat)
@@ -390,52 +416,52 @@ bool rotateRight(m3* mat)
 	return true;
 }
 
-bool GetMartixAroundCenter(m4* mat)
+bool GetMartixAroundCenter(m4* mat, Game_Point* centerCurrentFigure, GameField* field)
 {
-	if (((centerCurrentFigure.x - 2) < 0) || (centerCurrentFigure.x + 1 > (gameFieldWidth - 1))
-		|| ((centerCurrentFigure.y - 1) < 0) || ((centerCurrentFigure.y + 2) > (gameFieldHeight - 1)))
+	if (((centerCurrentFigure->x - 2) < 0) || (centerCurrentFigure->x + 1 > (field->width - 1))
+		|| ((centerCurrentFigure->y - 1) < 0) || ((centerCurrentFigure->y + 2) > (field->height - 1)))
 	{
 		return false;
 	}
 
-	mat->_11 = (f32)gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 2];
-	mat->_12 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 2];
-	mat->_13 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 2];
-	mat->_14 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 2];
-	mat->_21 = (f32)gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 1];
-	mat->_22 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1];
-	mat->_23 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1];
-	mat->_24 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1];
-	mat->_31 = (f32)gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 0];
-	mat->_32 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 0];
-	mat->_33 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 0];
-	mat->_34 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 0];
-	mat->_41 = (f32)gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y - 1];
-	mat->_42 = (f32)gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1];
-	mat->_43 = (f32)gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1];
-	mat->_44 = (f32)gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1];
+	mat->_11 = (f32)field->data[centerCurrentFigure->x - 2][centerCurrentFigure->y + 2];
+	mat->_12 = (f32)field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 2];
+	mat->_13 = (f32)field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y + 2];
+	mat->_14 = (f32)field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y + 2];
+	mat->_21 = (f32)field->data[centerCurrentFigure->x - 2][centerCurrentFigure->y + 1];
+	mat->_22 = (f32)field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 1];
+	mat->_23 = (f32)field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y + 1];
+	mat->_24 = (f32)field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y + 1];
+	mat->_31 = (f32)field->data[centerCurrentFigure->x - 2][centerCurrentFigure->y + 0];
+	mat->_32 = (f32)field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 0];
+	mat->_33 = (f32)field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y + 0];
+	mat->_34 = (f32)field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y + 0];
+	mat->_41 = (f32)field->data[centerCurrentFigure->x - 2][centerCurrentFigure->y - 1];
+	mat->_42 = (f32)field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y - 1];
+	mat->_43 = (f32)field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y - 1];
+	mat->_44 = (f32)field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y - 1];
 
 	return true;
 }
 
-void SetMatrixValueAroundCenter(m4* mat)
+void SetMatrixValueAroundCenter(m4* mat, Game_Point* centerCurrentFigure, GameField* field)
 {
-	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 2] = (i32)mat->_11;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 2] = (i32)mat->_12;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 2] = (i32)mat->_13;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 2] = (i32)mat->_14;
-	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 1] = (i32)mat->_21;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 1] = (i32)mat->_22;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 1] = (i32)mat->_23;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 1] = (i32)mat->_24;
-	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y + 0] = (i32)mat->_31;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y + 0] = (i32)mat->_32;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y + 0] = (i32)mat->_33;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y + 0] = (i32)mat->_34;
-	gameField[centerCurrentFigure.x - 2][centerCurrentFigure.y - 1] = (i32)mat->_41;
-	gameField[centerCurrentFigure.x - 1][centerCurrentFigure.y - 1] = (i32)mat->_42;
-	gameField[centerCurrentFigure.x - 0][centerCurrentFigure.y - 1] = (i32)mat->_43;
-	gameField[centerCurrentFigure.x + 1][centerCurrentFigure.y - 1] = (i32)mat->_44;
+	field->data[centerCurrentFigure->x - 2][centerCurrentFigure->y + 2] = (i32)mat->_11;
+	field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 2] = (i32)mat->_12;
+	field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y + 2] = (i32)mat->_13;
+	field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y + 2] = (i32)mat->_14;
+	field->data[centerCurrentFigure->x - 2][centerCurrentFigure->y + 1] = (i32)mat->_21;
+	field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 1] = (i32)mat->_22;
+	field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y + 1] = (i32)mat->_23;
+	field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y + 1] = (i32)mat->_24;
+	field->data[centerCurrentFigure->x - 2][centerCurrentFigure->y + 0] = (i32)mat->_31;
+	field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 0] = (i32)mat->_32;
+	field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y + 0] = (i32)mat->_33;
+	field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y + 0] = (i32)mat->_34;
+	field->data[centerCurrentFigure->x - 2][centerCurrentFigure->y - 1] = (i32)mat->_41;
+	field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y - 1] = (i32)mat->_42;
+	field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y - 1] = (i32)mat->_43;
+	field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y - 1] = (i32)mat->_44;
 }
 
 bool rotateLeft(m4* mat)
@@ -454,58 +480,58 @@ bool rotateLeft(m4* mat)
 	return true;
 }
 
-void TurnPlayerFigure(int direction)
+void TurnPlayerFigure(int direction, int* currentFigure, Game_Point* centerCurrentFigure, GameField* field)
 {
-	if (currentFigure > 1)
+	if (*currentFigure > 1)
 	{
 		if (direction == VK_LEFT)
 		{
 			m3 mat = {};
-			if (GetMartixAroundCenter(&mat))
+			if (GetMartixAroundCenter(&mat, centerCurrentFigure, field))
 			{
 				if (rotateLeft(&mat))
 				{
-					SetMatrixValueAroundCenter(&mat);
+					SetMatrixValueAroundCenter(&mat, centerCurrentFigure, field);
 				}
 			}
 		}
 		else if (direction == VK_RIGHT)
 		{
 			m3 mat = {};
-			if (GetMartixAroundCenter(&mat))
+			if (GetMartixAroundCenter(&mat, centerCurrentFigure, field))
 			{
 				if (rotateRight(&mat))
 				{
-					SetMatrixValueAroundCenter(&mat);
+					SetMatrixValueAroundCenter(&mat, centerCurrentFigure, field);
 				}
 			}
 		}
 	}
-	else if (currentFigure == 0)
+	else if (*currentFigure == 0)
 	{
 		m4 mat = {};
-		if (GetMartixAroundCenter(&mat))
+		if (GetMartixAroundCenter(&mat, centerCurrentFigure, field))
 		{
 			if (rotateLeft(&mat))
 			{
-				SetMatrixValueAroundCenter(&mat);
+				SetMatrixValueAroundCenter(&mat, centerCurrentFigure, field);
 			}
 		}
 	}
 }
 
-void MovePlayerFigure(int direction)
+void MovePlayerFigure(int direction, Game_Point* centerCurrentFigure, GameField* field)
 {
 	if (direction == VK_LEFT)
 	{
 		bool allowToMove = true;
-		for (int i = 0; i < gameFieldWidth; i++)
+		for (int i = 0; i < field->width; i++)
 		{
-			for (int j = 0; j < gameFieldHeight; j++)
+			for (int j = 0; j < field->height; j++)
 			{
-				if (gameField[i][j] == 2)
+				if (field->data[i][j] == 2)
 				{
-					if ((gameField[i - 1][j] == 1) || (i == 0))
+					if ((i == 0) || (field->data[i - 1][j] == 1))
 					{
 						allowToMove = false;
 					}
@@ -515,30 +541,30 @@ void MovePlayerFigure(int direction)
 
 		if (allowToMove)
 		{
-			for (int i = 1; i < gameFieldWidth; i++)
+			for (int i = 1; i < field->width; i++)
 			{
-				for (int j = 0; j < gameFieldHeight; j++)
+				for (int j = 0; j < field->height; j++)
 				{
-					if (gameField[i][j] == 2)
+					if (field->data[i][j] == 2)
 					{
-						gameField[i][j] = 0;
-						gameField[i - 1][j] = 2;
+						field->data[i][j] = 0;
+						field->data[i - 1][j] = 2;
 					}
 				}
 			}
-			centerCurrentFigure.x--;
+			centerCurrentFigure->x--;
 		}
 	}
 	else if (direction == VK_RIGHT)
 	{
 		bool allowToMove = true;
-		for (int i = 0; i < gameFieldWidth; i++)
+		for (int i = 0; i < field->width; i++)
 		{
-			for (int j = 0; j < gameFieldHeight; j++)
+			for (int j = 0; j < field->height; j++)
 			{
-				if (gameField[i][j] == 2)
+				if (field->data[i][j] == 2)
 				{
-					if ((gameField[i + 1][j] == 1) || (i == gameFieldWidth - 1))
+					if ((i == field->width - 1) || (field->data[i + 1][j] == 1))
 					{
 						allowToMove = false;
 					}
@@ -548,37 +574,37 @@ void MovePlayerFigure(int direction)
 
 		if (allowToMove)
 		{
-			for (int i = gameFieldWidth - 1; i >= 0; i--)
+			for (int i = field->width - 1; i >= 0; i--)
 			{
-				for (int j = 0; j < gameFieldHeight; j++)
+				for (int j = 0; j < field->height; j++)
 				{
-					if (gameField[i][j] == 2)
+					if (field->data[i][j] == 2)
 					{
-						gameField[i][j] = 0;
-						gameField[i + 1][j] = 2;
+						field->data[i][j] = 0;
+						field->data[i + 1][j] = 2;
 					}
 				}
 			}
-			centerCurrentFigure.x++;
+			centerCurrentFigure->x++;
 		}
 	}
 	else if (direction == VK_DOWN)
 	{
-		int lowerY = CheckForPlayerFigure();
-		if (WhatToDoWithPlayerFigure(lowerY) == 2)
+		int lowerY = CheckForPlayerFigure(field);
+		if (WhatToDoWithPlayerFigure(lowerY, field) == 2)
 		{
-			for (int i = 0; i < gameFieldWidth; i++)
+			for (int i = 0; i < field->width; i++)
 			{
-				for (int j = 1; j < gameFieldHeight; j++)
+				for (int j = 1; j < field->height; j++)
 				{
-					if (gameField[i][j] == 2)
+					if (field->data[i][j] == 2)
 					{
-						gameField[i][j - 1] = 2;
-						gameField[i][j] = 0;
+						field->data[i][j - 1] = 2;
+						field->data[i][j] = 0;
 					}
 				}
 			}
-			centerCurrentFigure.y--;
+			centerCurrentFigure->y--;
 		}
 	}
 	else
@@ -615,74 +641,74 @@ bool KeyReleased(int key)
 	return false;
 }
 
-void Control()
+void Control(TetrisHostGameState* state)
 {
 	if (KeyPressed(VK_LEFT))
 	{
 		controlLeftOnePressElapsed = 0;
-		MovePlayerFigure(VK_LEFT);
+		MovePlayerFigure(VK_LEFT, &state->centerCurrentFigure, &state->field);
 	}
 	if (KeyPressed(VK_RIGHT))
 	{
 		controlRightOnePressElapsed = 0;
-		MovePlayerFigure(VK_RIGHT);
+		MovePlayerFigure(VK_RIGHT, &state->centerCurrentFigure, &state->field);
 	}
 	if (KeyPressed(VK_DOWN))
 	{
 		controlDownOnePressElapsed = 0;
-		MovePlayerFigure(VK_DOWN);
+		MovePlayerFigure(VK_DOWN, &state->centerCurrentFigure, &state->field);
 	}
 	if (KeyPressed(VK_UP))
 	{
-		TurnPlayerFigure(VK_LEFT);
+		TurnPlayerFigure(VK_LEFT, &state->currentFigure, &state->centerCurrentFigure, &state->field);
 	}
 	if (KeyPressed(0x58)) // x
 	{
-		TurnPlayerFigure(VK_RIGHT);
+		TurnPlayerFigure(VK_RIGHT, &state->currentFigure, &state->centerCurrentFigure, &state->field);
 	}
 	if (KeyPressed(0x5A)) // z
 	{
-		TurnPlayerFigure(VK_LEFT);
+		TurnPlayerFigure(VK_LEFT, &state->currentFigure, &state->centerCurrentFigure, &state->field);
 	}
 
 	if (KeyDown(VK_DOWN))
 	{
-		controlDownOnePressElapsed += currentFrame - lastFrame;
+		controlDownOnePressElapsed += state->currentFrame - state->lastFrame;
 		if (controlDownOnePressElapsed >= controlOnePressDelay)
 		{
-			controlDownElapsed += currentFrame - lastFrame;
+			controlDownElapsed += state->currentFrame - state->lastFrame;
 			if (controlDownElapsed >= controlDelay)
 			{
 				controlDownElapsed = 0;
-				MovePlayerFigure(VK_DOWN);
+				MovePlayerFigure(VK_DOWN, &state->centerCurrentFigure, &state->field);
 			}
 		}
 	}
 
 	if (KeyDown(VK_LEFT))
 	{
-		controlLeftOnePressElapsed += currentFrame - lastFrame;
+		controlLeftOnePressElapsed += state->currentFrame - state->lastFrame;
 		if (controlLeftOnePressElapsed >= controlOnePressDelay)
 		{
-			controlLeftElapsed += currentFrame - lastFrame;
+			controlLeftElapsed += state->currentFrame - state->lastFrame;
 			if (controlLeftElapsed >= controlDelay)
 			{
 				controlLeftElapsed = 0;
-				MovePlayerFigure(VK_LEFT);
+				MovePlayerFigure(VK_LEFT, &state->centerCurrentFigure, &state->field);
 			}
 		}
 	}
 
 	if (KeyDown(VK_RIGHT))
 	{
-		controlRightOnePressElapsed += currentFrame - lastFrame;
+		controlRightOnePressElapsed += state->currentFrame - state->lastFrame;
 		if (controlRightOnePressElapsed >= controlOnePressDelay)
 		{
-			controlRightElapsed += currentFrame - lastFrame;
+			controlRightElapsed += state->currentFrame - state->lastFrame;
 			if (controlRightElapsed >= controlDelay)
 			{
 				controlRightElapsed = 0;
-				MovePlayerFigure(VK_RIGHT);
+				MovePlayerFigure(VK_RIGHT, &state->centerCurrentFigure, &state->field);
 			}
 		}
 	}
@@ -695,21 +721,23 @@ void Control()
 	KeyReleased(0x5A);
 }
 
-void UpdateTetrisGame()
+void UpdateTetrisGame(TetrisHostGameState* gameState)
 {
-	currentFrame = GetTimeStampMilliSecond();
-		timeElapsed += currentFrame - lastFrame;
-		Control();
-		lastFrame = currentFrame;
-		if (timeElapsed >= speedMillisecond)
+	// TODO: crossplatform TimeStamp
+	gameState->currentFrame = GetTimeStampMilliSecond();
+
+	gameState->timeElapsed += gameState->currentFrame - gameState->lastFrame;
+	Control(gameState);
+	gameState->lastFrame = gameState->currentFrame;
+	if (gameState->timeElapsed >= gameState->speedMillisecond)
+	{
+		UpdateGameTick(&gameState->centerCurrentFigure, &gameState->field);
+		if (CheckForPlayerFigure(&gameState->field) < 0)
 		{
-			UpdateGameTick();
-			if (CheckForPlayerFigure() < 0)
-			{
-				SpawnFigure();
-			}
-			timeElapsed = 0;
+			SpawnFigure(gameState);
 		}
+		gameState->timeElapsed = 0;
+	}
 }
 
 void DrawingFillRectangle(Game_Bitmap_Offscreen_Buffer* buffer, int x_pos, int y_pos, int width, int height, int type)
@@ -756,17 +784,20 @@ void DrawingFillRectangle(Game_Bitmap_Offscreen_Buffer* buffer, int x_pos, int y
 	}
 }
 
-void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer)
+void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, GameField* field)
 {
-	int posx = (i32)(buffer->width / 2.5f);
+	int gameFieldWidth = field->width;
+	int gameFieldHeight = field->height;
+	int** gameField = field->data;
+
 	int posy = 20;
-	f32 widthCoef = (f32)buffer->width / 800;
+	//f32 widthCoef = (f32)buffer->width / 800;
 	f32 heightCoef = (f32)buffer->height / 450;
 	f32 scaleCoef = 20.0f;
 
 	int border = 2;
 	// drawing glass
-	DrawingFillRectangle(buffer, posx, posy, (i32)(gameFieldWidth * scaleCoef * widthCoef), (i32)(gameFieldHeight * scaleCoef * heightCoef), 1);
+	DrawingFillRectangle(buffer, posx, posy, (i32)(gameFieldWidth * scaleCoef * heightCoef), (i32)(gameFieldHeight * scaleCoef * heightCoef), 1);
 
 	for (int i = 0; i < gameFieldWidth; i++)
 	{
@@ -774,7 +805,7 @@ void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer)
 		{
 			if (gameField[i][j] > 0)
 			{
-				DrawingFillRectangle(buffer, (i32)(i * scaleCoef * widthCoef + posx), (i32)(j * scaleCoef * heightCoef) + posy, (i32)(scaleCoef * widthCoef) - border, (i32)(scaleCoef * heightCoef) - border, 0);
+				DrawingFillRectangle(buffer, (i32)(i * scaleCoef * heightCoef + posx), (i32)(j * scaleCoef * heightCoef) + posy, (i32)(scaleCoef * heightCoef) - border, (i32)(scaleCoef * heightCoef) - border, 0);
 			}
 		}
 	}
@@ -784,10 +815,6 @@ void ProccessDigitInput(int key, IPStrucrute* ip)
 {
 	if (ip->ipLength < 31)
 	{
-		if (ip->ipLength == 3 || ip->ipLength == 7 || ip->ipLength == 11)
-		{
-			ip->ipString[ip->ipLength++] = L'.';
-		}
 		ip->ipString[ip->ipLength++] = key;
 	}
 }
@@ -834,6 +861,10 @@ void ProccesIPInput(IPStrucrute* ip)
 	{
 		ProccessDigitInput(0x39, ip);
 	}
+	if (KeyPressed(VK_OEM_PERIOD))
+	{
+		ProccessDigitInput(46, ip);
+	}
 	if (KeyPressed(VK_OEM_1))
 	{
 		ProccessDigitInput(58, ip);
@@ -842,10 +873,6 @@ void ProccesIPInput(IPStrucrute* ip)
 	{
 		if (ip->ipLength > 0)
 		{
-			if (ip->ipLength == 5 || ip->ipLength == 9 || ip->ipLength == 13)
-			{
-				ip->ipString[ip->ipLength-- - 1] = 0;
-			}
 			ip->ipString[ip->ipLength-- - 1] = 0;
 		}
 	}
@@ -866,7 +893,27 @@ void ProccesIPInput(IPStrucrute* ip)
 	KeyReleased(0x37);
 	KeyReleased(0x38);
 	KeyReleased(0x39);
+	KeyReleased(VK_OEM_PERIOD);
 	KeyReleased(VK_OEM_1);
 	KeyReleased(VK_BACK);
 	KeyReleased(VK_RETURN);
+}
+
+void InitTetrisGame(TetrisHostGameState* gameState)
+{
+	gameState->field.width = 10;
+	gameState->field.height = 20;
+	gameState->field.data = (int**)malloc(gameState->field.width * sizeof(int*));
+	for (int i = 0; i < gameState->field.width; i++)
+	{
+		gameState->field.data[i] = (int*)malloc(gameState->field.height * sizeof(int));
+	}
+
+	gameState->lastFrame = 0;
+	gameState->currentFrame = 0;
+	gameState->timeElapsed = 0;
+	gameState->speedMillisecond = 400;
+
+	gameState->currentFigure = -1;
+	gameState->centerCurrentFigure = { -1 };
 }
