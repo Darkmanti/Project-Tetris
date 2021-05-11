@@ -452,7 +452,6 @@ void InitWSAAndCreateSocket(WSADATA* wsaData)
 	}
 }
 
-
 void Win32ProcessCmdLineArguments(int numArgs, LPWSTR* commandLineArray)
 {
 	// TODO: maybe optimize it
@@ -653,7 +652,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	// TODO: this!!!
 	InitFont(&font, 110, 1200, L"..//res//fonts//OpenSans-Semibold.ttf", 32, 2048, 2048);
 
-	connect(NULL, NULL, NULL);
+	i64 currentFrame = 0;
 
 	// run the game
 	while (true)
@@ -761,9 +760,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		buffer.width = backbuffer.width;
 		buffer.height = backbuffer.height;
 		buffer.pitch = backbuffer.pitch;
-		GameUpdateAndRender(&input, &buffer, &soundBuffer);
+		GameUpdateAndRender(&input, &buffer, &soundBuffer, currentFrame);
 
 		Win32DisplayBufferInWindow(&backbuffer, deviceContext, dimension.width, dimension.height);
+
+		currentFrame = GetTimeStampMilliSecond();
 	}
 
 	return 0;

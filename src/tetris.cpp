@@ -38,7 +38,7 @@ void RenderWeirdGradient(Game_Bitmap_Offscreen_Buffer* buffer, int xOffset, int 
 	}
 }
 
-void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer)
+void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame)
 {
 	// Learnings
 	static int xOffset = 0;
@@ -57,7 +57,7 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 
 	if (multiplayerState == 1) // Single
 	{
-		UpdateTetrisGame(&hostGameState);
+		UpdateTetrisGame(&hostGameState, currentFrame);
 		RenderTetrisGame(buffer, (int)(buffer->width / 2.5f), &hostGameState.field);
 
 		// Fonts
@@ -153,85 +153,142 @@ void CheckOnBurningLine(GameField* field)
 	}
 }
 
-void SpawnFigure(TetrisHostGameState* state)
+bool SpawnFigure(TetrisHostGameState* state)
 {
 	Game_Point* centerCurrentFigure = &state->centerCurrentFigure;
 	GameField* field = &state->field;
 
-	state->currentFigure = rand() % 7;
+	if (state->currentFigure < 0)
+	{
+		state->currentFigure = rand() % 7;
+		state->nextFigure = rand() % 7;
+	}
+	else
+	{
+		state->currentFigure = state->nextFigure;
+		state->nextFigure = rand() % 7;
+	}
+
+	int heightPoint = field->height - 1;
+	int widthPoint = field->width / 2;
+
 
 	switch (state->currentFigure)
 	{
 		// palka
 		case 0:
 		{
-			field->data[3][19] = 2;
-			field->data[4][19] = 2;
-			field->data[5][19] = 2;
-			field->data[6][19] = 2;
-			centerCurrentFigure->x = 5;
-			centerCurrentFigure->y = 19;
+			// failure check
+			if (field->data[widthPoint - 2][heightPoint] == 1) return false;
+			if (field->data[widthPoint - 1][heightPoint] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint] == 1) return false;
+			if (field->data[widthPoint + 1][heightPoint] == 1) return false;
+
+			field->data[widthPoint - 2][heightPoint] = 2;
+			field->data[widthPoint - 1][heightPoint] = 2;
+			field->data[widthPoint    ][heightPoint] = 2;
+			field->data[widthPoint + 1][heightPoint] = 2;
+			centerCurrentFigure->x = widthPoint;
+			centerCurrentFigure->y = heightPoint;
 		} break;
 		// cubik
 		case 1:
 		{
-			field->data[4][19] = 2;
-			field->data[4][18] = 2;
-			field->data[5][19] = 2;
-			field->data[5][18] = 2;
+			// failure check
+			if (field->data[widthPoint - 1][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint - 1][heightPoint - 1] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint - 1] == 1) return false;
+
+			field->data[widthPoint - 1][heightPoint	   ] = 2;
+			field->data[widthPoint - 1][heightPoint - 1] = 2;
+			field->data[widthPoint	  ][heightPoint    ] = 2;
+			field->data[widthPoint    ][heightPoint - 1] = 2;
 		} break;
 		// z - obrazn
 		case 2:
 		{
-			field->data[4][19] = 2;
-			field->data[5][19] = 2;
-			field->data[5][18] = 2;
-			field->data[6][18] = 2;
-			centerCurrentFigure->x = 5;
-			centerCurrentFigure->y = 19;
+			// failure check
+			if (field->data[widthPoint - 1][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint - 1] == 1) return false;
+			if (field->data[widthPoint + 1][heightPoint - 1] == 1) return false;
+
+			field->data[widthPoint - 1][heightPoint    ] = 2;
+			field->data[widthPoint    ][heightPoint    ] = 2;
+			field->data[widthPoint    ][heightPoint - 1] = 2;
+			field->data[widthPoint + 1][heightPoint - 1] = 2;
+			centerCurrentFigure->x = widthPoint;
+			centerCurrentFigure->y = heightPoint;
 		} break;
 		// z - obrazn flip horizontal
 		case 3:
 		{
-			field->data[4][18] = 2;
-			field->data[5][18] = 2;
-			field->data[5][19] = 2;
-			field->data[6][19] = 2;
-			centerCurrentFigure->x = 5;
-			centerCurrentFigure->y = 19;
+			// failure check
+			if (field->data[widthPoint - 1][heightPoint - 1] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint - 1] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint + 1][heightPoint    ] == 1) return false;
+
+			field->data[widthPoint - 1][heightPoint - 1] = 2;
+			field->data[widthPoint    ][heightPoint - 1] = 2;
+			field->data[widthPoint    ][heightPoint    ] = 2;
+			field->data[widthPoint + 1][heightPoint    ] = 2;
+			centerCurrentFigure->x = widthPoint;
+			centerCurrentFigure->y = heightPoint;
 		} break;
 		// bukva G
 		case 4:
 		{
-			field->data[4][18] = 2;
-			field->data[4][19] = 2;
-			field->data[5][19] = 2;
-			field->data[6][19] = 2;
-			centerCurrentFigure->x = 5;
-			centerCurrentFigure->y = 18;
+			// failure check
+			if (field->data[widthPoint - 1][heightPoint - 1] == 1) return false;
+			if (field->data[widthPoint - 1][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint + 1][heightPoint    ] == 1) return false;
+
+			field->data[widthPoint - 1][heightPoint - 1] = 2;
+			field->data[widthPoint - 1][heightPoint    ] = 2;
+			field->data[widthPoint    ][heightPoint    ] = 2;
+			field->data[widthPoint + 1][heightPoint    ] = 2;
+			centerCurrentFigure->x = widthPoint;
+			centerCurrentFigure->y = heightPoint - 1;
 		} break;
 		// bukva G flip horizontal
 		case 5:
 		{
-			field->data[6][18] = 2;
-			field->data[4][19] = 2;
-			field->data[5][19] = 2;
-			field->data[6][19] = 2;
-			centerCurrentFigure->x = 5;
-			centerCurrentFigure->y = 18;
+			// failure check
+			if (field->data[widthPoint + 1][heightPoint - 1] == 1) return false;
+			if (field->data[widthPoint - 1][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint + 1][heightPoint    ] == 1) return false;
+
+			field->data[widthPoint + 1][heightPoint - 1] = 2;
+			field->data[widthPoint - 1][heightPoint    ] = 2;
+			field->data[widthPoint    ][heightPoint    ] = 2;
+			field->data[widthPoint + 1][heightPoint    ] = 2;
+			centerCurrentFigure->x = widthPoint;
+			centerCurrentFigure->y = heightPoint - 1;
 		} break;
 		// T obrazn
 		case 6:
 		{
-			field->data[4][19] = 2;
-			field->data[5][19] = 2;
-			field->data[6][19] = 2;
-			field->data[5][18] = 2;
-			centerCurrentFigure->x = 5;
-			centerCurrentFigure->y = 19;
+			// failure check
+			if (field->data[widthPoint - 1][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint + 1][heightPoint    ] == 1) return false;
+			if (field->data[widthPoint    ][heightPoint - 1] == 1) return false;
+
+			field->data[widthPoint - 1][heightPoint    ] = 2;
+			field->data[widthPoint    ][heightPoint    ] = 2;
+			field->data[widthPoint + 1][heightPoint    ] = 2;
+			field->data[widthPoint    ][heightPoint - 1] = 2;
+			centerCurrentFigure->x = widthPoint;
+			centerCurrentFigure->y = heightPoint;
 		} break;
 		invalid_default
 	}
+
+	return true;
 }
 
 int CheckForPlayerFigure(GameField* field)
@@ -273,15 +330,15 @@ int WhatToDoWithPlayerFigure(int lowerY, GameField* field)
 }
 
 // just check higher line
-bool CheckForGameEnd(GameField* field)
-{
-	for (int i = 0; i < field->width; i++)
-	{
-		if (field->data[i][field->height - 1] == 1)
-			return true;
-	}
-	return false;
-}
+//bool CheckForGameEnd(GameField* field)
+//{
+//	for (int i = 0; i < field->width; i++)
+//	{
+//		if (field->data[i][field->height - 1] == 1)
+//			return true;
+//	}
+//	return false;
+//}
 
 void UpdateGameTick(Game_Point* centerCurrentFigure, GameField* field)
 {
@@ -329,10 +386,10 @@ void UpdateGameTick(Game_Point* centerCurrentFigure, GameField* field)
 
 	CheckOnBurningLine(field);
 
-	if (CheckForGameEnd(field))
+	/*if (CheckForGameEnd(field))
 	{
 		ResetField(field);
-	}
+	}*/
 
 }
 
@@ -370,6 +427,32 @@ void SetMatrixValueAroundCenter(m3* mat, Game_Point* centerCurrentFigure, GameFi
 	field->data[centerCurrentFigure->x + 1][centerCurrentFigure->y - 1] = (i32)mat->_33;
 }
 
+bool CheckForRotateFailure(m3* mat, m3* temp)
+{
+	for (int i = 0; i < 9; i++)
+	{
+		if ((mat->data[i] == 1) && (temp->data[i] != 1))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool CheckForRotateFailure(m4* mat, m4* temp)
+{
+	for (int i = 0; i < 16; i++)
+	{
+		if ((mat->data[i] == 1) && (temp->data[i] != 1))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool rotateLeft(m3* mat)
 {
 	m3 temp = *mat;
@@ -382,12 +465,9 @@ bool rotateLeft(m3* mat)
 	mat->_11 = temp._31;
 	mat->_12 = temp._21;
 
-	for (int i = 0; i < 9; i++)
+	if (CheckForRotateFailure(mat, &temp))
 	{
-		if ((mat->data[i] == 2) && (temp.data[i] == 1))
-		{
-			return false;
-		}
+		return false;
 	}
 
 	return true;
@@ -405,12 +485,9 @@ bool rotateRight(m3* mat)
 	mat->_13 = temp._33;
 	mat->_12 = temp._23;
 
-	for (int i = 0; i < 9; i++)
+	if (CheckForRotateFailure(mat, &temp))
 	{
-		if ((mat->data[i] == 2) && (temp.data[i] == 1))
-		{
-			return false;
-		}
+		return false;
 	}
 
 	return true;
@@ -469,12 +546,9 @@ bool rotateLeft(m4* mat)
 	m4 temp = *mat;
 	*mat = Transpose(*mat);
 
-	for (int i = 0; i < 16; i++)
+	if (CheckForRotateFailure(mat, &temp))
 	{
-		if ((mat->data[i] == 2) && (temp.data[i] == 1))
-		{
-			return false;
-		}
+		return false;
 	}
 
 	return true;
@@ -653,11 +727,10 @@ void Control(TetrisHostGameState* state)
 		controlRightOnePressElapsed = 0;
 		MovePlayerFigure(VK_RIGHT, &state->centerCurrentFigure, &state->field);
 	}
-	if (KeyPressed(VK_DOWN))
+	/*if (KeyPressed(VK_DOWN))
 	{
-		controlDownOnePressElapsed = 0;
 		MovePlayerFigure(VK_DOWN, &state->centerCurrentFigure, &state->field);
-	}
+	}*/
 	if (KeyPressed(VK_UP))
 	{
 		TurnPlayerFigure(VK_LEFT, &state->currentFigure, &state->centerCurrentFigure, &state->field);
@@ -673,15 +746,11 @@ void Control(TetrisHostGameState* state)
 
 	if (KeyDown(VK_DOWN))
 	{
-		controlDownOnePressElapsed += state->currentFrame - state->lastFrame;
-		if (controlDownOnePressElapsed >= controlOnePressDelay)
+		controlDownElapsed += state->currentFrame - state->lastFrame;
+		if (controlDownElapsed >= controlDelay)
 		{
-			controlDownElapsed += state->currentFrame - state->lastFrame;
-			if (controlDownElapsed >= controlDelay)
-			{
-				controlDownElapsed = 0;
-				MovePlayerFigure(VK_DOWN, &state->centerCurrentFigure, &state->field);
-			}
+			controlDownElapsed = 0;
+			MovePlayerFigure(VK_DOWN, &state->centerCurrentFigure, &state->field);
 		}
 	}
 
@@ -715,16 +784,15 @@ void Control(TetrisHostGameState* state)
 
 	KeyReleased(VK_LEFT);
 	KeyReleased(VK_RIGHT);
-	KeyReleased(VK_DOWN);
+	//KeyReleased(VK_DOWN);
 	KeyReleased(VK_UP);
 	KeyReleased(0x58);
 	KeyReleased(0x5A);
 }
 
-void UpdateTetrisGame(TetrisHostGameState* gameState)
+void UpdateTetrisGame(TetrisHostGameState* gameState, i64 currentFrame)
 {
-	// TODO: crossplatform TimeStamp
-	gameState->currentFrame = GetTimeStampMilliSecond();
+	gameState->currentFrame = currentFrame;
 
 	gameState->timeElapsed += gameState->currentFrame - gameState->lastFrame;
 	Control(gameState);
@@ -734,7 +802,16 @@ void UpdateTetrisGame(TetrisHostGameState* gameState)
 		UpdateGameTick(&gameState->centerCurrentFigure, &gameState->field);
 		if (CheckForPlayerFigure(&gameState->field) < 0)
 		{
-			SpawnFigure(gameState);
+			if (SpawnFigure(gameState))
+			{
+				// Allright game be continue
+			}
+			else
+			{
+				// TODO: Animated Game Over
+				// Game over
+				ResetField(&gameState->field);
+			}
 		}
 		gameState->timeElapsed = 0;
 	}
@@ -786,6 +863,8 @@ void DrawingFillRectangle(Game_Bitmap_Offscreen_Buffer* buffer, int x_pos, int y
 
 void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, GameField* field)
 {
+	// TODO: colorize figure
+
 	int gameFieldWidth = field->width;
 	int gameFieldHeight = field->height;
 	int** gameField = field->data;
@@ -914,6 +993,8 @@ void InitTetrisGame(TetrisHostGameState* gameState)
 	gameState->timeElapsed = 0;
 	gameState->speedMillisecond = 400;
 
+	// Must be -1
 	gameState->currentFigure = -1;
+	gameState->nextFigure = -1;
 	gameState->centerCurrentFigure = { -1 };
 }

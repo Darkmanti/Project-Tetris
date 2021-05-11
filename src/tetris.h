@@ -53,8 +53,8 @@ i64 controlLeftElapsed = 0;
 i64 controlRightOnePressElapsed = 0;
 i64 controlRightElapsed = 0;
 
-i64 controlOnePressDelay = 450;
-i64 controlDelay = 60;
+i64 controlOnePressDelay = 60;
+i64 controlDelay = 40;
 
 Font font = {};
 
@@ -92,6 +92,8 @@ struct TetrisHostGameState
 
     int currentFigure;
     Game_Point centerCurrentFigure;
+
+    int nextFigure;
 };
 
 struct TetrisClientGameState
@@ -102,9 +104,9 @@ struct TetrisClientGameState
 TetrisHostGameState hostGameState = {};
 TetrisClientGameState clientGameState = {};
 
-void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer);
+void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame);
 
 void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, GameField* field);
-void UpdateTetrisGame(TetrisHostGameState* gameState);
+void UpdateTetrisGame(TetrisHostGameState* gameState, i64 currentFrame);
 
 void InitTetrisGame(TetrisHostGameState* gameState);
