@@ -5,7 +5,7 @@ IF "%1" EQU "/?" goto Help
 set SrcFilePath="%cd%\src\unity_build.cpp"
 set MainDir="%cd%"
 set GameName=Tetris
-set GameNameExe=unity_build.exe
+set GameNameExe=Teris.exe
 
 set AddLib=User32.lib Shell32.lib Gdi32.lib Ole32.lib Ws2_32.lib
 set AddDll=
@@ -45,31 +45,31 @@ goto Exit
 
 :Release
 pushd %BuildDirRe%
-cl %AllDef% %RelDef% %ReKeys% %SrcFilePath% %AddLib% %AddDll%
+cl %AllDef% %RelDef% %ReKeys% %SrcFilePath% %AddLib% %AddDll% /Fe%GameNameExe%
 popd
 goto Exit
 
 :Debug
 pushd %BuildDirDe%
-cl %AllDef% %DebDef% %DeKeys% %SrcFilePath% %AddLib% %AddDll%
+cl %AllDef% %DebDef% %DeKeys% %SrcFilePath% %AddLib% %AddDll% /Fe%GameNameExe%
 popd
 goto Exit
 
 :Hybrid
 pushd %BuildDirHy%
-cl %AllDef% %HybDef% %HyKeys% %SrcFilePath% %AddLib% %AddDll%
+cl %AllDef% %HybDef% %HyKeys% %SrcFilePath% %AddLib% %AddDll% /Fe%GameNameExe%
 popd
 goto Exit
 
 :All
 pushd %BuildDirRe%
-cl %AllDef% %RelDef% %ReKeys% %SrcFilePath% %AddLib% %AddDll%
+cl %AllDef% %RelDef% %ReKeys% %SrcFilePath% %AddLib% %AddDll% /Fe%GameNameExe%
 popd
 pushd %BuildDirDe%
-cl %AllDef% %DebDef% %DeKeys% %SrcFilePath% %AddLib% %AddDll%
+cl %AllDef% %DebDef% %DeKeys% %SrcFilePath% %AddLib% %AddDll% /Fe%GameNameExe%
 popd
 pushd %BuildDirHy%
-cl %AllDef% %HybDef% %HyKeys% %SrcFilePath% %AddLib% %AddDll%
+cl %AllDef% %HybDef% %HyKeys% %SrcFilePath% %AddLib% %AddDll% /Fe%GameNameExe%
 popd
 goto Exit
 
@@ -92,6 +92,7 @@ echo "hy" - hybrid build with all optimization and with debug info
 echo "re" - release build with all optimization and without debug info
 echo running the command with no parameters will execute all of these builds
 echo "clear" cleaning all build directory
+echo "makegame" run after build "re" (Release) build, this make a game
 goto Exit
 
 :MakeGame

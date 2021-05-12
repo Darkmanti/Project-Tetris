@@ -72,7 +72,13 @@ IPStrucrute ipStructure = {};
 void ProccesIPInput(IPStrucrute* ip);
 
 // TODO: GameState
-int multiplayerState = 1;
+int multiplayerState = 0;
+bool tryToConnectClient = false;
+bool listenConnectToServer = true;
+bool connectionEstablished = false;
+bool allowToSend = false;
+bool allowToCreateRecieveThread = false;
+bool runMPGame = false;
 
 struct GameField
 {
@@ -104,9 +110,10 @@ struct TetrisClientGameState
 TetrisHostGameState hostGameState = {};
 TetrisClientGameState clientGameState = {};
 
-void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame);
+void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame, GameField* rivalField);
 
 void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, GameField* field);
 void UpdateTetrisGame(TetrisHostGameState* gameState, i64 currentFrame);
 
 void InitTetrisGame(TetrisHostGameState* gameState);
+void InitGameField(GameField* field);

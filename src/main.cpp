@@ -25,8 +25,11 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#define DEFAULT_PORT "15621"
+
 // User files
 #include "tetris.h"
+#include "multiplayer.h"
 #include "math.h"
 #include "debug_console.h"
 #include "sound_file_loader.h"
@@ -78,6 +81,26 @@ struct Win32_XAudio2_Settings
 {
 	IXAudio2* pXAudio2;
 	IXAudio2MasteringVoice* pMasterVoice;
+};
+
+struct Win32_Socket_Info
+{
+	WSADATA wsaData;
+	SOCKET socket;
+	SOCKET clientSocket;
+	addrinfo* addrinfo;
+};
+
+struct Win32_Recieve_Data
+{
+	SOCKET id;
+	GameField* field;
+};
+
+struct Win32_Send_Data
+{
+	SOCKET id;
+	GameField* field;
 };
 
 // some global variable
@@ -401,7 +424,7 @@ void Win32DisplayBufferInWindow(Win32_Bitmap_Offscreen_Buffer* buffer, HDC devic
 				  SRCCOPY);
 }
 
-int SetStateWithDialogBox()
+int Win32SetStateWithDialogBox()
 {
 	int msgboxID = MessageBox(
 		NULL,
@@ -414,29 +437,30 @@ int SetStateWithDialogBox()
 	{
 		case IDCANCEL:
 		{
-			msgboxID = 1;
+			msgboxID = 0;
 		} break;
 		case IDTRYAGAIN:
 		{
-			msgboxID = 2;
+			msgboxID = 1;
 		} break;
 		case IDCONTINUE:
 		{
-			msgboxID = 3;
+			msgboxID = 2;
 		} break;
 	}
 
 	return msgboxID;
 }
 
-void InitWSAAndCreateSocket(WSADATA* wsaData)
+void Win32InitWSADATA(Win32_Socket_Info* info)
 {
-	int iResult;
+	WSADATA* wsaData = &info->wsaData;
 
+	int iResult;
 	iResult = WSAStartup(MAKEWORD(2, 2), wsaData);
 	if (iResult != 0)
 	{
-		con::Outf(L"WSAStartup failed: %d\n", iResult);
+		con::Outf(L"WSAStartup failed: %i32\n", iResult);
 	}
 
 	if (LOBYTE(wsaData->wVersion) != 2 || HIBYTE(wsaData->wVersion) != 2)
@@ -448,7 +472,186 @@ void InitWSAAndCreateSocket(WSADATA* wsaData)
 	}
 	else
 	{
-		con::Outf(L"The Winsock 2.2 dll was found okay\n");
+		//con::Outf(L"The Winsock 2.2 dll was found okay\n");
+	}
+}
+
+void Win32CreateServerSocket(Win32_Socket_Info* info)
+{
+	addrinfo hints;
+	addrinfo* result = info->addrinfo;
+
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+	hints.ai_flags = AI_PASSIVE;
+
+
+	// Resolve the local address and port to be used by the server
+	int iResult;
+	iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
+	if (iResult != 0) {
+		con::Outf(L"getaddrinfo failed: %i32\n", iResult);
+		WSACleanup();
+	}
+
+	SOCKET* ListenSocket = &info->socket;
+	*ListenSocket = INVALID_SOCKET;
+
+	// Create a SOCKET for the server to listen for client connections
+	*ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+
+	if (*ListenSocket == INVALID_SOCKET)
+	{
+		con::Outf(L"Error at socket(): %i32\n", WSAGetLastError());
+		freeaddrinfo(result);
+		WSACleanup();
+	}
+
+	// Setup the TCP listening socket
+	iResult = bind(*ListenSocket, result->ai_addr, (int)result->ai_addrlen);
+	if (iResult == SOCKET_ERROR)
+	{
+		con::Outf(L"bind failed with error: %i32\n", WSAGetLastError());
+		freeaddrinfo(result);
+		closesocket(*ListenSocket);
+		WSACleanup();
+	}
+
+	// Once the bind function is called, the address information returned by the getaddrinfo function is no longer needed. 
+	// The freeaddrinfo function is called to free the memory allocated by the getaddrinfo function for this address information.
+	//freeaddrinfo(result);
+
+	if (listen(*ListenSocket, SOMAXCONN) == SOCKET_ERROR)
+	{
+		con::Outf(L"Listen failed with error: %i32\n", WSAGetLastError());
+		closesocket(*ListenSocket);
+		WSACleanup();
+	}
+
+	con::Outf(L"Server has been running\n");
+}
+
+void Win32ListenConnectionToServer(Win32_Socket_Info* info)
+{
+	// Accept a client socket
+	con::Outf(L"Start listening to connect to the server\n");
+	info->clientSocket = accept(info->socket, NULL, NULL);
+	if (info->clientSocket == INVALID_SOCKET)
+	{
+		con::Outf(L"accept failed: %i32\n", WSAGetLastError());
+		closesocket(info->socket);
+		return;
+	}
+
+	connectionEstablished = true;
+	con::Outf(L"Connect to client established\n");
+}
+
+void Win32CreateClientSocket(Win32_Socket_Info* info, IPStrucrute* ip)
+{
+	struct addrinfo* result = info->addrinfo, * ptr = NULL, hints;
+	int iResult;
+
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	char string[32] = "";
+	wcstombs(string, ip->ipString, 32);
+
+	// Resolve the server address and port
+	if (strlen(string) > 9)
+	{
+		iResult = getaddrinfo(string, DEFAULT_PORT, &hints, &result);
+	}
+	if (iResult != 0)
+	{
+		con::Outf(L"getaddrinfo failed: %i32\n", iResult);
+		freeaddrinfo(result);
+		return;
+	}
+
+	SOCKET* ConnectSocket = &info->socket;
+	*ConnectSocket = INVALID_SOCKET;
+
+	// Attempt to connect to the first address returned by the call to getaddrinfo
+	ptr = result;
+
+	// Attempt to connect to an address until one succeeds
+	for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
+
+		// Create a SOCKET for connecting to server
+		*ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if (*ConnectSocket == INVALID_SOCKET)
+		{
+			con::Outf(L"socket failed with error: %i32\n", WSAGetLastError());
+			freeaddrinfo(result);
+			return;
+		}
+
+		// Connect to server.
+		iResult = connect(*ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+		if (iResult == SOCKET_ERROR)
+		{
+			closesocket(*ConnectSocket);
+			*ConnectSocket = INVALID_SOCKET;
+			continue;
+		}
+		break;
+	}
+
+	if (*ConnectSocket == INVALID_SOCKET)
+	{
+		con::Outf(L"Unable to connect to server!\n");
+		freeaddrinfo(result);
+		return;
+	}
+
+	connectionEstablished = true;
+	con::Outf(L"Connection to server established\n");
+
+	info->clientSocket = *ConnectSocket;
+}
+
+void Win32RecieveInfo(Win32_Recieve_Data* data)
+{
+	int iResult = 0;
+	do
+	{
+		char recvbuf[DEFAULT_BUFLEN] = "";
+		iResult = recv(data->id, recvbuf, DEFAULT_BUFLEN, 0);
+
+		if (iResult > 0)
+		{
+			BufferToGameField(data->field, recvbuf);
+		}
+		else if (iResult == 0)
+		{
+			con::Outf(L"Connection closed\n");
+			// ?????????DISCONNECT????????
+		}
+		else
+		{
+			con::Outf(L"recv failed: %i32\n", WSAGetLastError());
+			// DISCONNECT
+		}
+	} while (iResult > 0);
+}
+
+void Win32SendGameField(Win32_Send_Data* data)
+{
+	char sendbuf[DEFAULT_BUFLEN] = "";
+	GameFieldToBuffer(data->field, sendbuf);
+	int iSendResult = send(data->id, sendbuf, DEFAULT_BUFLEN, 0);
+	if (iSendResult == SOCKET_ERROR)
+	{
+		con::Outf(L"send failed: %i32\n", WSAGetLastError());
+		closesocket(data->id);
+		allowToSend = false;
+		// DISCONNECT
 	}
 }
 
@@ -646,11 +849,29 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	i16* samples = (i16*)VirtualAlloc(NULL, soundOutput.secondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
 	// TODO: GameState
-	multiplayerState = SetStateWithDialogBox();
+	GameField rivalField;
+	Win32_Recieve_Data recieveData = {};
+	Win32_Send_Data sendData = {};
+	multiplayerState = Win32SetStateWithDialogBox();
+	Win32_Socket_Info socketInfo;
+	if (multiplayerState > 0)
+	{
+		Win32InitWSADATA(&socketInfo);
+		InitGameField(&rivalField);
+
+		if (multiplayerState == 1) // client
+		{
+			// Nothing
+		}
+		else if (multiplayerState == 2) // server
+		{
+			Win32CreateServerSocket(&socketInfo);
+		}
+	}
 
 	// Fonts
 	// TODO: this!!!
-	InitFont(&font, 110, 1200, L"..//res//fonts//OpenSans-Semibold.ttf", 32, 2048, 2048);
+	InitFont(&font, 80, 1200, L"..//res//fonts//OpenSans-Semibold.ttf", 32, 2048, 2048);
 
 	i64 currentFrame = 0;
 
@@ -752,6 +973,48 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 			Win32FillSoundBuffer(&soundOutput, bytesToLock, bytesToWrite, &soundBuffer);
 		}
 
+		if (multiplayerState == 2 && listenConnectToServer)
+		{
+			CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)Win32ListenConnectionToServer, &socketInfo, NULL, NULL);
+			listenConnectToServer = false;
+		}
+
+		if (!connectionEstablished && tryToConnectClient)
+		{
+			// NOTE: BLOCK CALL
+			Win32CreateClientSocket(&socketInfo, &ipStructure);
+			tryToConnectClient = false;
+			if (connectionEstablished)
+			{
+				//ClearInputIp();
+			}
+		}
+
+		if (connectionEstablished)
+		{
+			recieveData.field = &rivalField;
+			recieveData.id = socketInfo.clientSocket;
+			sendData.field = &hostGameState.field;
+			sendData.id = socketInfo.clientSocket;
+			connectionEstablished = false;
+			allowToCreateRecieveThread = true;
+			allowToSend = true;
+			runMPGame = true;
+		}
+
+		if (allowToCreateRecieveThread)
+		{
+			allowToCreateRecieveThread = false;
+			// recieve info Fill rivalField 
+			CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)Win32RecieveInfo, &recieveData, NULL, NULL);
+		}
+
+		if (allowToSend)
+		{
+			// send info Filling myField;
+			Win32SendGameField(&sendData);
+		}
+
 		// Render some graphics
 		Win32_Window_Dimension dimension = Win32GetWindowDimension(hMainWnd);
 
@@ -760,7 +1023,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		buffer.width = backbuffer.width;
 		buffer.height = backbuffer.height;
 		buffer.pitch = backbuffer.pitch;
-		GameUpdateAndRender(&input, &buffer, &soundBuffer, currentFrame);
+		GameUpdateAndRender(&input, &buffer, &soundBuffer, currentFrame, &rivalField);
 
 		Win32DisplayBufferInWindow(&backbuffer, deviceContext, dimension.width, dimension.height);
 

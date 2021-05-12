@@ -38,7 +38,7 @@ void RenderWeirdGradient(Game_Bitmap_Offscreen_Buffer* buffer, int xOffset, int 
 	}
 }
 
-void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame)
+void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame, GameField* rivalField)
 {
 	// Learnings
 	static int xOffset = 0;
@@ -55,7 +55,7 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 		gameInit = true;
 	}
 
-	if (multiplayerState == 1) // Single
+	if (multiplayerState == 0) // Single
 	{
 		UpdateTetrisGame(&hostGameState, currentFrame);
 		RenderTetrisGame(buffer, (int)(buffer->width / 2.5f), &hostGameState.field);
@@ -63,12 +63,24 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 		// Fonts
 		WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Сообщение", 10, 50);
 	}
-	else if (multiplayerState == 2) // Join multiplayer
+	else if (multiplayerState == 1) // Join multiplayer
 	{
-		ProccesIPInput(&ipStructure);
+		if(!tryToConnectClient) { ProccesIPInput(&ipStructure); }
+		
 		if (ipStructure.ipLength > 0)
 		{
 			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, ipStructure.ipString, 10, 50);
+		}
+
+		if (runMPGame)
+		{
+			UpdateTetrisGame(&hostGameState, currentFrame);
+
+			RenderTetrisGame(buffer, (int)(buffer->width / 6.5f), &hostGameState.field);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Ты:", 10, 620);
+
+			RenderTetrisGame(buffer, (int)(buffer->width / 1.5f), rivalField);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Соперник:", 800, 620);
 		}
 
 		/*
@@ -79,8 +91,18 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 		5.	Disconnect.
 		*/
 	}
-	else if (multiplayerState == 3) // Host multiplayer
+	else if (multiplayerState == 2) // Host multiplayer
 	{
+		if (runMPGame)
+		{
+			UpdateTetrisGame(&hostGameState, currentFrame);
+
+			RenderTetrisGame(buffer, (int)(buffer->width / 6.5f), &hostGameState.field);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Ты:", 10, 620);
+
+			RenderTetrisGame(buffer, (int)(buffer->width / 1.5f), rivalField);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Соперник:", 800, 620);
+		}
 		/*
 		1.	Initialize Winsock.
 		2.	Create a socket.
@@ -727,10 +749,6 @@ void Control(TetrisHostGameState* state)
 		controlRightOnePressElapsed = 0;
 		MovePlayerFigure(VK_RIGHT, &state->centerCurrentFigure, &state->field);
 	}
-	/*if (KeyPressed(VK_DOWN))
-	{
-		MovePlayerFigure(VK_DOWN, &state->centerCurrentFigure, &state->field);
-	}*/
 	if (KeyPressed(VK_UP))
 	{
 		TurnPlayerFigure(VK_LEFT, &state->currentFigure, &state->centerCurrentFigure, &state->field);
@@ -784,7 +802,6 @@ void Control(TetrisHostGameState* state)
 
 	KeyReleased(VK_LEFT);
 	KeyReleased(VK_RIGHT);
-	//KeyReleased(VK_DOWN);
 	KeyReleased(VK_UP);
 	KeyReleased(0x58);
 	KeyReleased(0x5A);
@@ -956,10 +973,10 @@ void ProccesIPInput(IPStrucrute* ip)
 		}
 	}
 
-	if (KeyPressed(VK_RETURN))
+	if (KeyPressed(VK_RETURN) && (ip->ipLength > 9))
 	{
 		// Join
-		con::Outf(L"Ты вошёл поздравляю\n");
+		tryToConnectClient = true;
 	}
 
 	KeyReleased(0x30);
@@ -986,6 +1003,10 @@ void InitTetrisGame(TetrisHostGameState* gameState)
 	for (int i = 0; i < gameState->field.width; i++)
 	{
 		gameState->field.data[i] = (int*)malloc(gameState->field.height * sizeof(int));
+		for (int j = 0; j < gameState->field.height; j++)
+		{
+			gameState->field.data[i][j] = 0;
+		}
 	}
 
 	gameState->lastFrame = 0;
@@ -997,4 +1018,17 @@ void InitTetrisGame(TetrisHostGameState* gameState)
 	gameState->currentFigure = -1;
 	gameState->nextFigure = -1;
 	gameState->centerCurrentFigure = { -1 };
+}
+
+void InitGameField(GameField* field)
+{
+	field->width = 10;
+	field->height = 20;
+	field->data = (int**)malloc(field->width * sizeof(int*));
+	for (int i = 0; i < field->width; i++)
+	{
+		field->data[i] = (int*)malloc(field->height * sizeof(int));
+	}
+
+	
 }
