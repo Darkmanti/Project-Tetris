@@ -138,6 +138,7 @@ namespace con
 								_i64tow(va_arg(args, long long), temp, 10);
 								wcscat(result, temp);
 							} break;
+							invalid_default
 						}
 						i = i + 2;
 					} break;
@@ -287,7 +288,7 @@ namespace con
 		Outf(L"[Assertion failed] ");
 		SetConColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 		Outf(L"Expression (%s) result is false\n", expr);
-		Outf(L"File: \"%s\"\nfunction: %s, line: %i.\n", file, func, line);
+		Outf(L"File: \"%s\"\nfunction: %s, line: %i32.\n", file, func, line);
 
 		// TODO: output parameters, now this is just a garbage
 		SetConColor(FOREGROUND_RED | FOREGROUND_GREEN);
@@ -311,7 +312,7 @@ namespace con
 		Outf(L"[Assertion failed] ");
 		SetConColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 		Outf(L"Expression (%s) result is false\n", expr);
-		Outf(L"File: \"%s\"\nfunction: %s, line: %i.\n", file, func, line);
+		Outf(L"File: \"%s\"\nfunction: %s, line: %i32.\n", file, func, line);
 	}
 }
 

@@ -38,15 +38,24 @@ void RenderWeirdGradient(Game_Bitmap_Offscreen_Buffer* buffer, int xOffset, int 
 	}
 }
 
-void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame, GameField* rivalField)
+void GameUpdateAndRender(Game_Memory* memory, Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame, MPRecieveInfo* info)
 {
 	// Learnings
-	static int xOffset = 0;
-	static int yOffset = 0;
-	static int toneHz = 256;
+	
+	Game_State* gameState = (Game_State*)memory->permanentStorage;
+	if (!memory->isInitialized)
+	{
+		gameState->xOffset = 0;
+		gameState->yOffset = 0;
+		gameState->toneHz = 256;
 
-	//GameOutputSound(soundBuffer, toneHz);
-	RenderWeirdGradient(buffer, xOffset, yOffset);
+		// TODO: This may be more appropriate to do in the platform layer
+		memory->isInitialized = true;
+	}
+
+	
+	//GameOutputSound(soundBuffer, gameState->toneHz);
+	RenderWeirdGradient(buffer, gameState->xOffset, gameState->yOffset);
 
 	// Tetris
 	if (!gameInit)
@@ -61,7 +70,12 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 		RenderTetrisGame(buffer, (int)(buffer->width / 2.5f), &hostGameState.field);
 
 		// Fonts
-		WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Сообщение", 10, 50);
+		wchar_t wcharStringBuffer[30] = {};
+		_itow_s(hostGameState.currentScore, wcharStringBuffer, 10, 10);
+		WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 40, 170);
+		WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"max:", 40, 110);
+		_itow_s(hostGameState.maxScore, wcharStringBuffer, 10, 10);
+		WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 40, 50);
 	}
 	else if (multiplayerState == 1) // Join multiplayer
 	{
@@ -79,8 +93,23 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 			RenderTetrisGame(buffer, (int)(buffer->width / 6.5f), &hostGameState.field);
 			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Ты:", 10, 620);
 
-			RenderTetrisGame(buffer, (int)(buffer->width / 1.5f), rivalField);
+			// fonts
+			wchar_t wcharStringBuffer[30] = {};
+			_itow_s(hostGameState.currentScore, wcharStringBuffer, 10, 10);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 10, 170);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"max:", 10, 110);
+			_itow_s(hostGameState.maxScore, wcharStringBuffer, 10, 10);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 10, 50);
+
+			RenderTetrisGame(buffer, (int)(buffer->width / 1.5f), info->field);
 			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Соперник:", 800, 620);
+
+			// fonts rival
+			_itow_s(info->currentScore, wcharStringBuffer, 10, 10);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 600, 170);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"max:", 600, 110);
+			_itow_s(info->maxScore, wcharStringBuffer, 10, 10);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 600, 50);
 		}
 
 		/*
@@ -100,8 +129,23 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 			RenderTetrisGame(buffer, (int)(buffer->width / 6.5f), &hostGameState.field);
 			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Ты:", 10, 620);
 
-			RenderTetrisGame(buffer, (int)(buffer->width / 1.5f), rivalField);
+			// fonts
+			wchar_t wcharStringBuffer[30] = {};
+			_itow_s(hostGameState.currentScore, wcharStringBuffer, 10, 10);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 10, 170);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"max:", 10, 110);
+			_itow_s(hostGameState.maxScore, wcharStringBuffer, 10, 10);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 10, 50);
+
+			RenderTetrisGame(buffer, (int)(buffer->width / 1.5f), info->field);
 			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"Соперник:", 800, 620);
+
+			// fonts rival
+			_itow_s(info->currentScore, wcharStringBuffer, 10, 10);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 600, 170);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, L"max:", 600, 110);
+			_itow_s(info->maxScore, wcharStringBuffer, 10, 10);
+			WriteFont(buffer, V4(247.0f, 70.0f, 51.0f, 0.0f), &font, wcharStringBuffer, 600, 50);
 		}
 		/*
 		1.	Initialize Winsock.
@@ -117,7 +161,7 @@ void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer
 
 // Tetris
 
-void ResetField(GameField* field)
+void ResetField(Tetris_Game_Field* field)
 {
 	for (int i = 0; i < field->width; i++)
 	{
@@ -128,7 +172,7 @@ void ResetField(GameField* field)
 	}
 }
 
-void CheckOnBurningLine(GameField* field)
+void CheckOnBurningLine(Tetris_Game_Field* field, int* currentScore)
 {
 	// TODO: variable height
 	bool list[20] = { false };
@@ -152,6 +196,8 @@ void CheckOnBurningLine(GameField* field)
 
 	if (lineCounter > 0)
 	{
+		*currentScore += lineCounter * lineCounter * 10;
+
 		// TODO: SUPER WAU EFFECT!!!!
 		for (int j = field->height - 1; j >= 0; j--)
 		{
@@ -175,10 +221,10 @@ void CheckOnBurningLine(GameField* field)
 	}
 }
 
-bool SpawnFigure(TetrisHostGameState* state)
+bool SpawnFigure(Tetris_Game_State* state)
 {
 	Game_Point* centerCurrentFigure = &state->centerCurrentFigure;
-	GameField* field = &state->field;
+	Tetris_Game_Field* field = &state->field;
 
 	if (state->currentFigure < 0)
 	{
@@ -313,7 +359,7 @@ bool SpawnFigure(TetrisHostGameState* state)
 	return true;
 }
 
-int CheckForPlayerFigure(GameField* field)
+int CheckForPlayerFigure(Tetris_Game_Field* field)
 {
 	for (int j = 0; j < field->height; j++)
 	{
@@ -328,7 +374,7 @@ int CheckForPlayerFigure(GameField* field)
 	return -1;
 }
 
-int WhatToDoWithPlayerFigure(int lowerY, GameField* field)
+int WhatToDoWithPlayerFigure(int lowerY, Tetris_Game_Field* field)
 {
 	if (lowerY == 0)
 	{
@@ -352,7 +398,7 @@ int WhatToDoWithPlayerFigure(int lowerY, GameField* field)
 }
 
 // just check higher line
-//bool CheckForGameEnd(GameField* field)
+//bool CheckForGameEnd(Tetris_Game_Field* field)
 //{
 //	for (int i = 0; i < field->width; i++)
 //	{
@@ -362,7 +408,7 @@ int WhatToDoWithPlayerFigure(int lowerY, GameField* field)
 //	return false;
 //}
 
-void UpdateGameTick(Game_Point* centerCurrentFigure, GameField* field)
+void UpdateGameTick(Game_Point* centerCurrentFigure, Tetris_Game_Field* field, int* maxScore, int* currentScore)
 {
 	// 0 - reserv
 	// 1 - change to 1
@@ -406,7 +452,7 @@ void UpdateGameTick(Game_Point* centerCurrentFigure, GameField* field)
 		ASSERT(whatToDo);
 	}
 
-	CheckOnBurningLine(field);
+	CheckOnBurningLine(field, currentScore);
 
 	/*if (CheckForGameEnd(field))
 	{
@@ -415,7 +461,7 @@ void UpdateGameTick(Game_Point* centerCurrentFigure, GameField* field)
 
 }
 
-bool GetMartixAroundCenter(m3* mat, Game_Point* centerCurrentFigure, GameField* field)
+bool GetMartixAroundCenter(m3* mat, Game_Point* centerCurrentFigure, Tetris_Game_Field* field)
 {
 	if (((centerCurrentFigure->x - 1) < 0) || (centerCurrentFigure->x + 1 > (field->width - 1))
 		|| ((centerCurrentFigure->y - 1) < 0) || ((centerCurrentFigure->y + 1) > (field->height - 1)))
@@ -436,7 +482,7 @@ bool GetMartixAroundCenter(m3* mat, Game_Point* centerCurrentFigure, GameField* 
 	return true;
 }
 
-void SetMatrixValueAroundCenter(m3* mat, Game_Point* centerCurrentFigure, GameField* field)
+void SetMatrixValueAroundCenter(m3* mat, Game_Point* centerCurrentFigure, Tetris_Game_Field* field)
 {
 	field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 1] = (i32)mat->_11;
 	field->data[centerCurrentFigure->x - 0][centerCurrentFigure->y + 1] = (i32)mat->_12;
@@ -515,7 +561,7 @@ bool rotateRight(m3* mat)
 	return true;
 }
 
-bool GetMartixAroundCenter(m4* mat, Game_Point* centerCurrentFigure, GameField* field)
+bool GetMartixAroundCenter(m4* mat, Game_Point* centerCurrentFigure, Tetris_Game_Field* field)
 {
 	if (((centerCurrentFigure->x - 2) < 0) || (centerCurrentFigure->x + 1 > (field->width - 1))
 		|| ((centerCurrentFigure->y - 1) < 0) || ((centerCurrentFigure->y + 2) > (field->height - 1)))
@@ -543,7 +589,7 @@ bool GetMartixAroundCenter(m4* mat, Game_Point* centerCurrentFigure, GameField* 
 	return true;
 }
 
-void SetMatrixValueAroundCenter(m4* mat, Game_Point* centerCurrentFigure, GameField* field)
+void SetMatrixValueAroundCenter(m4* mat, Game_Point* centerCurrentFigure, Tetris_Game_Field* field)
 {
 	field->data[centerCurrentFigure->x - 2][centerCurrentFigure->y + 2] = (i32)mat->_11;
 	field->data[centerCurrentFigure->x - 1][centerCurrentFigure->y + 2] = (i32)mat->_12;
@@ -576,7 +622,7 @@ bool rotateLeft(m4* mat)
 	return true;
 }
 
-void TurnPlayerFigure(int direction, int* currentFigure, Game_Point* centerCurrentFigure, GameField* field)
+void TurnPlayerFigure(int direction, int* currentFigure, Game_Point* centerCurrentFigure, Tetris_Game_Field* field)
 {
 	if (*currentFigure > 1)
 	{
@@ -616,7 +662,7 @@ void TurnPlayerFigure(int direction, int* currentFigure, Game_Point* centerCurre
 	}
 }
 
-void MovePlayerFigure(int direction, Game_Point* centerCurrentFigure, GameField* field)
+void MovePlayerFigure(int direction, Game_Point* centerCurrentFigure, Tetris_Game_Field* field)
 {
 	if (direction == VK_LEFT)
 	{
@@ -737,7 +783,7 @@ bool KeyReleased(int key)
 	return false;
 }
 
-void Control(TetrisHostGameState* state)
+void Control(Tetris_Game_State* state)
 {
 	if (KeyPressed(VK_LEFT))
 	{
@@ -807,7 +853,7 @@ void Control(TetrisHostGameState* state)
 	KeyReleased(0x5A);
 }
 
-void UpdateTetrisGame(TetrisHostGameState* gameState, i64 currentFrame)
+void UpdateTetrisGame(Tetris_Game_State* gameState, i64 currentFrame)
 {
 	gameState->currentFrame = currentFrame;
 
@@ -816,7 +862,7 @@ void UpdateTetrisGame(TetrisHostGameState* gameState, i64 currentFrame)
 	gameState->lastFrame = gameState->currentFrame;
 	if (gameState->timeElapsed >= gameState->speedMillisecond)
 	{
-		UpdateGameTick(&gameState->centerCurrentFigure, &gameState->field);
+		UpdateGameTick(&gameState->centerCurrentFigure, &gameState->field, &gameState->maxScore, &gameState->currentScore);
 		if (CheckForPlayerFigure(&gameState->field) < 0)
 		{
 			if (SpawnFigure(gameState))
@@ -827,6 +873,7 @@ void UpdateTetrisGame(TetrisHostGameState* gameState, i64 currentFrame)
 			{
 				// TODO: Animated Game Over
 				// Game over
+				gameState->maxScore = gameState->currentScore;
 				ResetField(&gameState->field);
 			}
 		}
@@ -849,9 +896,9 @@ void DrawingFillRectangle(Game_Bitmap_Offscreen_Buffer* buffer, int x_pos, int y
 				u8 red = y + 3;
 				u8 green = x + 10;
 				u8 blue = 125 + x;
-				u8 reserv = 0;
+				//u8 reserv = 0;
 
-				*pixel++ = (blue | (green << 8) | (red << 16) | (reserv << 24));
+				*pixel++ = (blue | (green << 8) | (red << 16));
 			}
 			row += buffer->pitch;
 		}
@@ -869,22 +916,31 @@ void DrawingFillRectangle(Game_Bitmap_Offscreen_Buffer* buffer, int x_pos, int y
 				u8 red = 128;
 				u8 green = 128;
 				u8 blue = 128;
-				u8 reserv = 0;
+				//u8 reserv = 0;
+				f32 opacity = 1.0f;
 
-				*pixel++ = (blue | (green << 8) | (red << 16) | (reserv << 24));
+				u8 prevRed = ((u8*)pixel)[2];
+				u8 prevGreen = ((u8*)pixel)[1];
+				u8 prevBlue = ((u8*)pixel)[0];
+
+				red = (prevRed - ((prevRed - red) * opacity));
+				green = (prevGreen - ((prevGreen - green) * opacity));
+				blue = (prevBlue - ((prevBlue - blue) * opacity));
+
+				*pixel++ = (blue | (green << 8) | (red << 16));
 			}
 			row += buffer->pitch;
 		}
 	}
 }
 
-void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, GameField* field)
+void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, Tetris_Game_Field* field)
 {
 	// TODO: colorize figure
 
-	int gameFieldWidth = field->width;
-	int gameFieldHeight = field->height;
-	int** gameField = field->data;
+	int Tetris_Game_FieldWidth = field->width;
+	int Tetris_Game_FieldHeight = field->height;
+	int** Tetris_Game_Field = field->data;
 
 	int posy = 20;
 	//f32 widthCoef = (f32)buffer->width / 800;
@@ -893,13 +949,13 @@ void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, GameField*
 
 	int border = 2;
 	// drawing glass
-	DrawingFillRectangle(buffer, posx, posy, (i32)(gameFieldWidth * scaleCoef * heightCoef), (i32)(gameFieldHeight * scaleCoef * heightCoef), 1);
+	DrawingFillRectangle(buffer, posx, posy, (i32)(Tetris_Game_FieldWidth * scaleCoef * heightCoef), (i32)(Tetris_Game_FieldHeight * scaleCoef * heightCoef), 1);
 
-	for (int i = 0; i < gameFieldWidth; i++)
+	for (int i = 0; i < Tetris_Game_FieldWidth; i++)
 	{
-		for (int j = 0; j < gameFieldHeight; j++)
+		for (int j = 0; j < Tetris_Game_FieldHeight; j++)
 		{
-			if (gameField[i][j] > 0)
+			if (Tetris_Game_Field[i][j] > 0)
 			{
 				DrawingFillRectangle(buffer, (i32)(i * scaleCoef * heightCoef + posx), (i32)(j * scaleCoef * heightCoef) + posy, (i32)(scaleCoef * heightCoef) - border, (i32)(scaleCoef * heightCoef) - border, 0);
 			}
@@ -995,7 +1051,7 @@ void ProccesIPInput(IPStrucrute* ip)
 	KeyReleased(VK_RETURN);
 }
 
-void InitTetrisGame(TetrisHostGameState* gameState)
+void InitTetrisGame(Tetris_Game_State* gameState)
 {
 	gameState->field.width = 10;
 	gameState->field.height = 20;
@@ -1018,9 +1074,12 @@ void InitTetrisGame(TetrisHostGameState* gameState)
 	gameState->currentFigure = -1;
 	gameState->nextFigure = -1;
 	gameState->centerCurrentFigure = { -1 };
+
+	gameState->maxScore = 0;
+	gameState->currentScore = 0;
 }
 
-void InitGameField(GameField* field)
+void InitGameField(Tetris_Game_Field* field)
 {
 	field->width = 10;
 	field->height = 20;
@@ -1029,6 +1088,10 @@ void InitGameField(GameField* field)
 	{
 		field->data[i] = (int*)malloc(field->height * sizeof(int));
 	}
+}
 
-	
+void ClearInput(IPStrucrute* ipStruct)
+{
+	ipStruct->ipLength = 0;
+	memset(ipStruct->ipString, 0, 32 * sizeof(wchar_t));
 }

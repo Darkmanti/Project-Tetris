@@ -14,6 +14,11 @@
 
 // TODO: In the future, rendering _specifically_ will become a three-tiered abstraction!!!
 
+#define Kilobytes(value) ((value)*1024LL)
+#define Megabytes(value) (Kilobytes(value)*1024LL)
+#define Gigabytes(value) (Megabytes(value)*1024LL)
+#define Terabytes(value) (Gigabytes(value)*1024LL)
+
 struct Game_Sound_Output_Buffer
 {
     int samplesPerSecond;
@@ -44,6 +49,24 @@ struct Game_Input
 
 };
 
+struct Game_Memory
+{
+    bool isInitialized;
+
+    u64 permanentStorageSize;
+    void* permanentStorage; // In WIndows this initialize by ZERO, but on particular platform this may not be
+
+    u64 transientStorageSize;
+    void* transientStorage;
+};
+
+struct Game_State
+{
+    int xOffset;
+    int yOffset;
+    int toneHz;
+};
+
 bool keyState[256] = {};
 
 i64 controlDownOnePressElapsed = 0;
@@ -53,8 +76,8 @@ i64 controlLeftElapsed = 0;
 i64 controlRightOnePressElapsed = 0;
 i64 controlRightElapsed = 0;
 
-i64 controlOnePressDelay = 60;
-i64 controlDelay = 40;
+i64 controlOnePressDelay = 90;
+i64 controlDelay = 60;
 
 Font font = {};
 
@@ -80,16 +103,16 @@ bool allowToSend = false;
 bool allowToCreateRecieveThread = false;
 bool runMPGame = false;
 
-struct GameField
+struct Tetris_Game_Field
 {
     int width;
     int height;
     int** data;
 };
 
-struct TetrisHostGameState
+struct Tetris_Game_State
 {
-    GameField field;
+    Tetris_Game_Field field;
 
     i64 lastFrame;
     i64 currentFrame;
@@ -100,20 +123,33 @@ struct TetrisHostGameState
     Game_Point centerCurrentFigure;
 
     int nextFigure;
+
+    int maxScore;
+    int currentScore;
 };
 
-struct TetrisClientGameState
+struct MPRecieveInfo
 {
-    GameField field;
+    Tetris_Game_Field* field;
+    int currentScore;
+    int maxScore;
 };
 
-TetrisHostGameState hostGameState = {};
-TetrisClientGameState clientGameState = {};
+struct MPSendInfo
+{
+    Tetris_Game_Field* field;
+    int* currentScore;
+    int* maxScore;
+};
 
-void GameUpdateAndRender(Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame, GameField* rivalField);
+Tetris_Game_State hostGameState = {};
 
-void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, GameField* field);
-void UpdateTetrisGame(TetrisHostGameState* gameState, i64 currentFrame);
+void GameUpdateAndRender(Game_Memory* memory, Game_Input* input, Game_Bitmap_Offscreen_Buffer* buffer, Game_Sound_Output_Buffer* soundBuffer, i64 currentFrame, MPRecieveInfo* info);
 
-void InitTetrisGame(TetrisHostGameState* gameState);
-void InitGameField(GameField* field);
+void RenderTetrisGame(Game_Bitmap_Offscreen_Buffer* buffer, int posx, Tetris_Game_Field* field);
+void UpdateTetrisGame(Tetris_Game_State* gameState, i64 currentFrame);
+
+void InitTetrisGame(Tetris_Game_State* gameState);
+void InitGameField(Tetris_Game_Field* field);
+
+void ClearInput(IPStrucrute* ipStruct);

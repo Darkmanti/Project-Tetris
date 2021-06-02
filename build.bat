@@ -5,12 +5,12 @@ IF "%1" EQU "/?" goto Help
 set SrcFilePath="%cd%\src\unity_build.cpp"
 set MainDir="%cd%"
 set GameName=Tetris
-set GameNameExe=Teris.exe
+set GameNameExe=Tetris.exe
 
 set AddLib=User32.lib Shell32.lib Gdi32.lib Ole32.lib Ws2_32.lib
 set AddDll=
 
-rem /D and without spaces write a definitions
+rem write "/D" and without spaces write a definitions
 set AllDef=
 set DebDef=
 set RelDef=

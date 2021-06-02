@@ -48,8 +48,8 @@
 // XAudio2 hopes are pinned on this new engine.
 #include <xaudio2.h>
 
-#define MILLI_SECOND(x) x * 1'000
-#define MICRO_SECOND(x) x * 1'000'000
+#define MILLI_SECOND(value) (value * 1'000)
+#define MICRO_SECOND(value) (value * 1'000'000)
 
 //init window on windows
 struct Win32_Bitmap_Offscreen_Buffer
@@ -94,13 +94,13 @@ struct Win32_Socket_Info
 struct Win32_Recieve_Data
 {
 	SOCKET id;
-	GameField* field;
+	MPRecieveInfo* info;
 };
 
 struct Win32_Send_Data
 {
 	SOCKET id;
-	GameField* field;
+	MPSendInfo* info;
 };
 
 // some global variable
@@ -621,12 +621,14 @@ void Win32RecieveInfo(Win32_Recieve_Data* data)
 	int iResult = 0;
 	do
 	{
+		//_mm_pause();
 		char recvbuf[DEFAULT_BUFLEN] = "";
 		iResult = recv(data->id, recvbuf, DEFAULT_BUFLEN, 0);
+		//con::Outf(L"%i32 bytes recieve\n", iResult);
 
 		if (iResult > 0)
 		{
-			BufferToGameField(data->field, recvbuf);
+			BufferToGameInfo(data->info, recvbuf);
 		}
 		else if (iResult == 0)
 		{
@@ -644,8 +646,9 @@ void Win32RecieveInfo(Win32_Recieve_Data* data)
 void Win32SendGameField(Win32_Send_Data* data)
 {
 	char sendbuf[DEFAULT_BUFLEN] = "";
-	GameFieldToBuffer(data->field, sendbuf);
+	GameInfoToBuffer(data->info, sendbuf);
 	int iSendResult = send(data->id, sendbuf, DEFAULT_BUFLEN, 0);
+	//con::Outf(L"%i32 bytes send\n", iSendResult);
 	if (iSendResult == SOCKET_ERROR)
 	{
 		con::Outf(L"send failed: %i32\n", WSAGetLastError());
@@ -849,9 +852,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	i16* samples = (i16*)VirtualAlloc(NULL, soundOutput.secondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
 	// TODO: GameState
-	GameField rivalField;
+	Tetris_Game_Field rivalField = {};
+	MPRecieveInfo rivalInfo = {};
+	rivalInfo.field = &rivalField;
 	Win32_Recieve_Data recieveData = {};
+	recieveData.info = &rivalInfo;
+	MPSendInfo myInfo = {};
 	Win32_Send_Data sendData = {};
+	sendData.info = &myInfo;
 	multiplayerState = Win32SetStateWithDialogBox();
 	Win32_Socket_Info socketInfo;
 	if (multiplayerState > 0)
@@ -875,6 +883,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	i64 currentFrame = 0;
 
+	Game_Memory gameMemory = {};
+	gameMemory.permanentStorageSize = Megabytes(64);
+	gameMemory.transientStorageSize = Gigabytes(1);
+	u64 totalSize = gameMemory.permanentStorageSize + gameMemory.transientStorageSize;
+	gameMemory.permanentStorage = VirtualAlloc(NULL, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	gameMemory.transientStorage = (u8*)gameMemory.permanentStorage + gameMemory.permanentStorageSize;
+
+	// TODO: Logging about lack of memory and shutdown the process
+	
 	// run the game
 	while (true)
 	{
@@ -981,20 +998,23 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 		if (!connectionEstablished && tryToConnectClient)
 		{
+			con::Outf(L"Happen\n");
 			// NOTE: BLOCK CALL
 			Win32CreateClientSocket(&socketInfo, &ipStructure);
 			tryToConnectClient = false;
 			if (connectionEstablished)
 			{
-				//ClearInputIp();
+				ClearInput(&ipStructure);
+				//DisableInput
 			}
 		}
 
 		if (connectionEstablished)
 		{
-			recieveData.field = &rivalField;
 			recieveData.id = socketInfo.clientSocket;
-			sendData.field = &hostGameState.field;
+			sendData.info->field = &hostGameState.field;
+			sendData.info->currentScore = &hostGameState.currentScore;
+			sendData.info->maxScore = &hostGameState.maxScore;
 			sendData.id = socketInfo.clientSocket;
 			connectionEstablished = false;
 			allowToCreateRecieveThread = true;
@@ -1023,7 +1043,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		buffer.width = backbuffer.width;
 		buffer.height = backbuffer.height;
 		buffer.pitch = backbuffer.pitch;
-		GameUpdateAndRender(&input, &buffer, &soundBuffer, currentFrame, &rivalField);
+		GameUpdateAndRender(&gameMemory, &input, &buffer, &soundBuffer, currentFrame, &rivalInfo);
 
 		Win32DisplayBufferInWindow(&backbuffer, deviceContext, dimension.width, dimension.height);
 

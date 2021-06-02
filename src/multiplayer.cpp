@@ -1,32 +1,40 @@
 #include "multiplayer.h"
 
-void GameFieldToBuffer(GameField* field, char* buffer)
+void GameInfoToBuffer(MPSendInfo* info, char* buffer)
 {
 	int* ptr = (int*)buffer;
-	*ptr++ = field->width;
-	*ptr++ = field->height;
 
-	for (int i = 0; i < field->width; i++)
+	*ptr++ = *info->currentScore;
+	*ptr++ = *info->maxScore;
+
+	*ptr++ = info->field->width;
+	*ptr++ = info->field->height;
+
+	for (int i = 0; i < info->field->width; i++)
 	{
-		for (int j = 0; j < field->height; j++)
+		for (int j = 0; j < info->field->height; j++)
 		{
-			*ptr++ = field->data[i][j];
+			*ptr++ = info->field->data[i][j];
 		}
 	}
 }
 
 
-void BufferToGameField(GameField* field, char* buffer)
+void BufferToGameInfo(MPRecieveInfo* info, char* buffer)
 {
 	int* ptr = (int*)buffer;
-	field->width = *ptr++;
-	field->height = *ptr++;
 
-	for (int i = 0; i < field->width; i++)
+	info->currentScore = *ptr++;
+	info->maxScore = *ptr++;
+
+	info->field->width = *ptr++;
+	info->field->height = *ptr++;
+
+	for (int i = 0; i < info->field->width; i++)
 	{
-		for (int j = 0; j < field->height; j++)
+		for (int j = 0; j < info->field->height; j++)
 		{
-			field->data[i][j] = *ptr++;
+			info->field->data[i][j] = *ptr++;
 		}
 	}
 }
