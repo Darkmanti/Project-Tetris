@@ -624,11 +624,12 @@ void Win32RecieveInfo(Win32_Recieve_Data* data)
 		//_mm_pause();
 		char recvbuf[DEFAULT_BUFLEN] = "";
 		iResult = recv(data->id, recvbuf, DEFAULT_BUFLEN, 0);
-		//con::Outf(L"%i32 bytes recieve\n", iResult);
+		con::Outf(L"%i32 bytes recieve\n", iResult);
 
 		if (iResult > 0)
 		{
 			BufferToGameInfo(data->info, recvbuf);
+			allowToSend = true;
 		}
 		else if (iResult == 0)
 		{
@@ -648,7 +649,7 @@ void Win32SendGameField(Win32_Send_Data* data)
 	char sendbuf[DEFAULT_BUFLEN] = "";
 	GameInfoToBuffer(data->info, sendbuf);
 	int iSendResult = send(data->id, sendbuf, DEFAULT_BUFLEN, 0);
-	//con::Outf(L"%i32 bytes send\n", iSendResult);
+	con::Outf(L"%i32 bytes send\n", iSendResult);
 	if (iSendResult == SOCKET_ERROR)
 	{
 		con::Outf(L"send failed: %i32\n", WSAGetLastError());
@@ -1033,6 +1034,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		{
 			// send info Filling myField;
 			Win32SendGameField(&sendData);
+			allowToSend = false;
 		}
 
 		// Render some graphics
