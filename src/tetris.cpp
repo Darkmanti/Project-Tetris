@@ -1068,7 +1068,7 @@ void InitTetrisGame(Tetris_Game_State* gameState)
 	gameState->lastFrame = 0;
 	gameState->currentFrame = 0;
 	gameState->timeElapsed = 0;
-	gameState->speedMillisecond = 400;
+	gameState->speedMillisecond = 1000;
 
 	// Must be -1
 	gameState->currentFigure = -1;

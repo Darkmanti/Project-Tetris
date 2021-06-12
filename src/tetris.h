@@ -76,8 +76,8 @@ i64 controlLeftElapsed = 0;
 i64 controlRightOnePressElapsed = 0;
 i64 controlRightElapsed = 0;
 
-i64 controlOnePressDelay = 90;
-i64 controlDelay = 60;
+i64 controlOnePressDelay = 130;
+i64 controlDelay = 90;
 
 Font font = {};
 
